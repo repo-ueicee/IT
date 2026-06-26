@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solicitud de Requerimientos · Eventos UEICEE</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --yellow: #FFD000;
+    --navy: #153244;
+    --navy-soft: #1e4357;
+    --teal: #8DE2D6;
+    --teal-dark: #5bc4ba;
+    --bg: #f1f3f5;
+    --card: #ffffff;
+    --line: #e2e6ea;
+    --line-strong: #cdd5db;
+    --muted: #5c6670;
+    --text: #202124;
+    --danger: #d64545;
+    --danger-soft: #fdeeee;
+    --success: #2f9e44;
+    --field-bg: #fafbfc;
+    --radius: 12px;
+    --shadow: 0 6px 24px rgba(21, 50, 68, 0.10);
+    --font: "Archivo", "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 28px 16px 60px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 900px; margin: 0 auto; }
+
+  .app-header {
+    background: var(--navy);
+    border-radius: var(--radius);
+    padding: 26px 30px 24px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    margin-bottom: 22px;
+  }
+  .app-header::before { content:""; position:absolute; top:0; left:0; right:0; height:6px; background:var(--yellow); }
+  .app-header::after { content:"BA"; position:absolute; right:26px; bottom:-14px; font-size:88px; font-weight:800; color:rgba(141,226,214,0.14); letter-spacing:-4px; line-height:1; }
+  .brand-tag { display:inline-block; font-size:11px; font-weight:700; letter-spacing:.10em; text-transform:uppercase; color:var(--navy); background:var(--yellow); padding:4px 11px; border-radius:999px; margin-bottom:12px; }
+  .app-header h1 { color:#fff; font-size:25px; font-weight:800; line-height:1.18; letter-spacing:-.01em; position:relative; z-index:1; }
+  .app-header p { color:var(--teal); font-size:13.5px; font-weight:500; margin-top:6px; position:relative; z-index:1; }
+
+  .card { background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:8px 30px 28px; }
+
+  fieldset { border:none; border-top:1px solid var(--line); padding:22px 0 4px; margin:0; }
+  fieldset:first-of-type { border-top:none; }
+  legend { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--navy); display:flex; align-items:center; gap:8px; }
+  legend::before { content:""; width:10px; height:10px; background:var(--yellow); border-radius:3px; display:inline-block; }
+  .legend-note { font-weight:500; text-transform:none; letter-spacing:0; color:var(--muted); font-size:12px; }
+
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 18px; margin-top:16px; }
+  .full { grid-column:1 / -1; }
+  .form-group { display:flex; flex-direction:column; }
+
+  label { font-size:13px; font-weight:600; color:var(--navy); margin-bottom:6px; display:flex; align-items:center; gap:5px; }
+  .req { color:var(--danger); font-weight:800; }
+  .opt { color:var(--muted); font-weight:500; font-size:12px; }
+
+  input[type="text"], input[type="date"], input[type="number"], textarea, select {
+    width:100%; padding:11px 12px; border:1.5px solid var(--line-strong); border-radius:8px;
+    background:var(--field-bg); font-family:var(--font); font-size:14px; color:var(--text);
+    transition:border-color .15s, box-shadow .15s, background .15s;
+  }
+  input:focus, textarea:focus, select:focus { outline:none; border-color:var(--navy); background:#fff; box-shadow:0 0 0 3px rgba(141,226,214,0.35); }
+  textarea { resize:vertical; min-height:74px; }
+  select {
+    appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23153244' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 13px center; padding-right:34px; cursor:pointer;
+  }
+
+  .lugar-hint { font-size:12px; color:var(--teal-dark); font-weight:600; margin-top:5px; }
+
+  .form-group.invalid input, .form-group.invalid select { border-color:var(--danger); background:var(--danger-soft); }
+  .field-error { color:var(--danger); font-size:12px; font-weight:600; margin-top:5px; display:none; }
+  .form-group.invalid .field-error { display:block; }
+
+  .switch-row { display:flex; align-items:center; gap:11px; margin-top:18px; }
+  .switch-row.sub { margin-top:14px; }
+  .switch-label { font-size:13.5px; font-weight:600; color:var(--navy); }
+  .switch { position:relative; display:inline-block; width:42px; height:24px; flex-shrink:0; }
+  .switch input { opacity:0; width:0; height:0; }
+  .slider { position:absolute; inset:0; background:var(--line-strong); border-radius:999px; transition:.2s; cursor:pointer; }
+  .slider::before { content:""; position:absolute; height:18px; width:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.25); }
+  .switch input:checked + .slider { background:var(--navy); }
+  .switch input:checked + .slider::before { transform:translateX(18px); }
+
+  .multi-controls { margin-top:16px; padding:16px; background:var(--field-bg); border:1px solid var(--line); border-radius:10px; }
+  .form-group.inline { flex-direction:row; align-items:center; gap:12px; }
+  .form-group.inline label { margin-bottom:0; }
+  .form-group.inline input { width:90px; }
+
+  .evt-card { border:1px solid var(--line); border-left:4px solid var(--teal-dark); border-radius:10px; padding:14px 18px 16px; margin-top:14px; background:#fff; }
+  .evt-head { display:flex; align-items:center; gap:10px; }
+  .evt-badge { font-size:12px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--navy); background:var(--teal); padding:3px 10px; border-radius:999px; }
+  .inherit-note { font-size:12px; color:var(--muted); font-weight:600; font-style:italic; }
+
+  .actions { display:flex; gap:12px; margin-top:26px; flex-wrap:wrap; }
+  button, .btn-mail {
+    font-family:var(--font); font-size:15px; font-weight:700; border:none; border-radius:9px;
+    cursor:pointer; padding:13px 22px; transition:transform .08s, box-shadow .15s, background .15s;
+    text-decoration:none; display:inline-flex; align-items:center; justify-content:center;
+  }
+  button:active { transform:translateY(1px); }
+  .btn-primary { background:var(--navy); color:#fff; flex:1; min-width:200px; box-shadow:0 3px 10px rgba(21,50,68,0.25); }
+  .btn-primary:hover { background:var(--navy-soft); }
+  .btn-secondary { background:#fff; color:var(--navy); border:1.5px solid var(--line-strong); }
+  .btn-secondary:hover { border-color:var(--navy); background:var(--field-bg); }
+  .btn-sheet { background:var(--teal-dark); color:var(--navy); }
+  .btn-sheet:hover { background:var(--teal); }
+  .btn-sheet:disabled { opacity:.6; cursor:default; }
+  .btn-sheet.done { background:var(--success); color:#fff; }
+
+  .alert-banner { display:none; align-items:flex-start; gap:10px; background:var(--danger-soft); border:1.5px solid var(--danger); border-radius:9px; padding:12px 14px; margin-top:18px; color:#8a2a2a; font-size:13.5px; font-weight:600; }
+  .alert-banner.show { display:flex; }
+  .alert-banner.ok { background:#eaf7ee; border-color:var(--success); color:#1e6b32; }
+  .alert-banner.ok::before { background:var(--success); content:"✓"; }
+  .alert-banner::before { content:"!"; flex-shrink:0; width:20px; height:20px; background:var(--danger); color:#fff; border-radius:50%; text-align:center; line-height:20px; font-weight:800; font-size:13px; }
+
+  .output-section { display:none; margin-top:26px; }
+  .output-section.show { display:block; }
+  .output-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px; }
+  .output-head h3 { font-size:15px; color:var(--navy); font-weight:700; }
+  .out-btns { display:flex; gap:10px; flex-wrap:wrap; }
+  .btn-mail { background:var(--yellow); color:var(--navy); padding:9px 16px; font-size:13.5px; }
+  .btn-mail:hover { filter:brightness(.95); }
+  .btn-copy { background:var(--teal-dark); color:var(--navy); padding:9px 16px; font-size:13.5px; }
+  .btn-copy:hover { background:var(--teal); }
+  .btn-copy.done { background:var(--success); color:#fff; }
+
+  .mail-meta { background:var(--field-bg); border:1px solid var(--line); border-radius:9px; padding:12px 15px; font-size:13px; margin-bottom:10px; line-height:1.9; word-break:break-word; }
+  .ml-key { font-weight:700; color:var(--navy); margin-right:4px; }
+  .mini-copy { background:transparent; border:none; color:var(--teal-dark); font-size:12px; font-weight:700; padding:0 4px; cursor:pointer; text-decoration:underline; }
+
+  .output-box { background:var(--navy); border-radius:10px; padding:4px; }
+  #bodyText { white-space:pre-wrap; font-family:var(--font); font-size:13px; line-height:1.6; color:var(--text); background:#fff; border-radius:8px; border-left:5px solid var(--yellow); padding:20px 22px; }
+
+  .footer-note { text-align:center; color:var(--muted); font-size:12px; margin-top:26px; }
+  .flow-note { margin-top:24px; padding:12px 15px; background:var(--soft, #eef8f7); border:1px solid var(--teal); border-left:4px solid var(--teal-dark); border-radius:9px; font-size:13.5px; color:var(--navy); line-height:1.5; }
+  .flow-note strong { font-weight:700; }
+  .hidden { display:none !important; }
+
+  @media (max-width:620px) {
+    .grid { grid-template-columns:1fr; }
+    .app-header h1 { font-size:21px; }
+    .card { padding:4px 18px 22px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="app-header">
+    <span class="brand-tag">UEICEE · Ministerio de Educación · GCBA</span>
+    <h1>Solicitud de requerimientos para eventos</h1>
+    <p>Capacitaciones, jornadas, talleres, reuniones y otros eventos · Salas, técnica y catering</p>
+  </div>
+
+  <div class="card">
+
+    <fieldset>
+      <legend>¿Qué tipo de evento?</legend>
+      <div class="grid">
+        <div class="form-group full" id="grp-tipo">
+          <label for="tipo">Tipo de evento <span class="req">*</span></label>
+          <input type="text" id="tipo" placeholder="Ej: capacitaciones, jornadas, talleres, reuniones" oninput="updateTypeUI()">
+          <span class="field-error">Indicá el tipo de evento.</span>
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset id="datosOpe" class="hidden">
+      <legend>Datos del operativo</legend>
+      <div class="grid">
+        <div class="form-group" id="grp-denom">
+          <label for="denom">Denominación <span class="req">*</span></label>
+          <input type="text" id="denom" placeholder="Ej: Aplicadores, supervisores, etc." oninput="updateBadges()">
+          <span class="field-error">Indicá la denominación.</span>
+        </div>
+        <div class="form-group" id="grp-operativo">
+          <label for="operativo">Operativo <span class="opt">(solo si aplica)</span></label>
+          <input type="text" id="operativo" placeholder="Ej: FEPBA / TESBA" oninput="updateBadges()">
+        </div>
+      </div>
+
+      <div class="switch-row">
+        <label class="switch"><input type="checkbox" id="multi" onchange="onMultiToggle()"><span class="slider"></span></label>
+        <span class="switch-label">Hay más de una sesión / fecha</span>
+      </div>
+
+      <div class="multi-controls hidden" id="multiControls">
+        <div class="form-group inline">
+          <label for="cantEvt">¿Cuántas sesiones?</label>
+          <input type="number" id="cantEvt" min="2" value="2" oninput="onCantChange()">
+        </div>
+        <div class="switch-row sub">
+          <label class="switch"><input type="checkbox" id="sameML" onchange="applyInheritance()"><span class="slider"></span></label>
+          <span class="switch-label">Todas tienen la misma modalidad y el mismo lugar (se completan desde la Sesión 1)</span>
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset id="evtfsld" class="hidden">
+      <legend>Sesiones / instancias</legend>
+      <div id="evtContainer"></div>
+    </fieldset>
+
+    <fieldset id="reqfsld" class="hidden">
+      <legend>Requerimientos</legend>
+      <div class="grid">
+        <div class="form-group full">
+          <label for="tecnica">Requerimientos técnicos y de sala <span class="opt">(→ Sistemas)</span></label>
+          <textarea id="tecnica" placeholder="Ej: Proyector, 2 micrófonos inalámbricos, netbook con acceso a internet."></textarea>
+        </div>
+        <div class="form-group full">
+          <label for="catering">Catering <span class="opt">(→ UEICEE · salas)</span></label>
+          <textarea id="catering" placeholder="Ej: Servicio de cafetería continuo, agua para oradores, viandas."></textarea>
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset id="obsfsld" class="hidden">
+      <legend>Observaciones generales <span class="legend-note">(→ Luis Zipitria)</span></legend>
+      <div class="grid">
+        <div class="form-group full">
+          <label for="observaciones">Observaciones / pendientes</label>
+          <textarea id="observaciones" placeholder="Ej: Cantidad final sujeta a confirmación de inscripciones. Mesa de acreditación en el ingreso."></textarea>
+        </div>
+      </div>
+    </fieldset>
+
+    <p class="flow-note"><strong>Para confirmar el evento:</strong> generá el correo, envialo y luego seleccioná el botón «Registrar en planilla».</p>
+
+    <div class="actions">
+      <button type="button" class="btn-primary" onclick="generarCorreo()">Generar correo</button>
+      <button type="button" class="btn-sheet" id="sheetBtn" onclick="registrarEnPlanilla()">Registrar en planilla</button>
+      <button type="button" class="btn-secondary" onclick="limpiar()">Limpiar</button>
+    </div>
+
+    <div class="alert-banner" id="alertBanner"></div>
+
+    <div class="output-section" id="outputSection">
+      <div class="output-head">
+        <h3>Correo generado</h3>
+        <div class="out-btns">
+          <a id="openMail" href="#" class="btn-mail">Abrir en cliente de correo</a>
+          <button type="button" class="btn-copy" id="copyBtn" onclick="copiarCuerpo()">Copiar cuerpo</button>
+        </div>
+      </div>
+      <div class="mail-meta">
+        <div><span class="ml-key">Para:</span> <span id="toLine"></span> <button type="button" class="mini-copy" onclick="copiarDest()">copiar destinatarios</button></div>
+        <div><span class="ml-key">CC:</span> <span id="ccLine"></span></div>
+        <div><span class="ml-key">Asunto:</span> <span id="subjectLine"></span></div>
+      </div>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:10px;">Si al abrir el correo el cuerpo aparece cortado, usá «Copiar cuerpo» y pegalo en el mail.</p>
+      <div class="output-box"><div id="bodyText"></div></div>
+    </div>
+
+  </div>
+
+  <p class="footer-note">Herramienta interna · Coordinación de Operativos · UEICEE</p>
+
+</div>
+
+<script>
+  // ⬇⬇⬇ PEGAR AQUÍ LA URL DEL APPS SCRIPT (Pieza 1). Sin esto, no se registra en la planilla.
+  const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycby3mkY5eA8u1Fvg5w2z6HRKFVFkKuaUS5sZv3pcg61ZIO7figBVYut3k-VSIUol9RY/exec';
+  // ⬆⬆⬆
+
+  const evtContainer = document.getElementById('evtContainer');
+  let evtCount = 0;
+  let currentBody = '';
+  let currentDest = '';
+
+  function singularize(s) {
+    s = s.toLowerCase().trim();
+    const map = {
+      'capacitaciones': 'capacitación',
+      'jornadas': 'jornada',
+      'talleres': 'taller',
+      'reuniones': 'reunión',
+      'eventos': 'evento',
+    };
+    if (map[s]) return map[s];
+    if (s.endsWith('es')) return s.slice(0, -2);
+    if (s.endsWith('s')) return s.slice(0, -1);
+    return s;
+  }
+
+  function updateTypeUI() {
+    const tipo = val('tipo');
+    const datosOpe = document.getElementById('datosOpe');
+    const evtfsld = document.getElementById('evtfsld');
+    const reqfsld = document.getElementById('reqfsld');
+    const obsfsld = document.getElementById('obsfsld');
+    if (tipo) {
+      datosOpe.classList.remove('hidden');
+      evtfsld.classList.remove('hidden');
+      reqfsld.classList.remove('hidden');
+      obsfsld.classList.remove('hidden');
+      updateDenomPlaceholder();
+      // Asegurar que haya al menos 1 sesión visible
+      if (evtCount === 0) {
+        setEvtCount(1);
+      }
+      updateBadges();
+    } else {
+      datosOpe.classList.add('hidden');
+      evtfsld.classList.add('hidden');
+      reqfsld.classList.add('hidden');
+      obsfsld.classList.add('hidden');
+      document.getElementById('grp-tipo').classList.remove('invalid');
+    }
+  }
+
+  function updateDenomPlaceholder() {
+    const input = document.getElementById('denom');
+    input.placeholder = 'Ej: Aplicadores, supervisores, etc.';
+  }
+
+  function evtBlockHTML(i) {
+    let html = '<div class="evt-card" id="evt-' + i + '">';
+    html += '<div class="evt-head">';
+    html += '<span class="evt-badge" id="badge-' + i + '">Sesión ' + (i + 1) + '</span>';
+    html += '<span class="inherit-note hidden" id="inherit-' + i + '">Modalidad y lugar se toman de la Sesión 1.</span>';
+    html += '</div>';
+    html += '<div class="grid">';
+    html += '<div class="form-group" id="grp-fecha-' + i + '">';
+    html += '<label>Fecha <span class="req">*</span></label>';
+    html += '<input type="date" id="fecha-' + i + '">';
+    html += '<span class="field-error">Indicá la fecha.</span>';
+    html += '</div>';
+    html += '<div class="form-group">';
+    html += '<label>Horario</label>';
+    html += '<input type="text" id="horario-' + i + '" placeholder="Ej: 09:00 a 13:00 hs">';
+    html += '</div>';
+    html += '<div class="form-group" id="grp-asistentes-' + i + '">';
+    html += '<label>Cantidad de asistentes <span class="req">*</span></label>';
+    html += '<input type="number" min="1" id="asistentes-' + i + '" placeholder="Ej: 120">';
+    html += '<span class="field-error">Ingresá la cantidad de asistentes.</span>';
+    html += '</div>';
+    html += '<div class="form-group" id="grp-modalidad-' + i + '">';
+    html += '<label>Modalidad <span class="req">*</span></label>';
+    html += '<select id="modalidad-' + i + '" onchange="onModalidad(' + i + ')">';
+    html += '<option value="">— Seleccionar —</option>';
+    html += '<option>Presencial</option>';
+    html += '<option>Virtual</option>';
+    html += '</select>';
+    html += '<span class="field-error">Seleccioná la modalidad.</span>';
+    html += '</div>';
+    html += '<div class="form-group" id="grp-lugar-' + i + '">';
+    html += '<label id="lugar-label-' + i + '">Lugar</label>';
+    html += '<input type="text" id="lugar-' + i + '" placeholder="Ej: Paseo Colón – Auditorio">';
+    html += '<span class="lugar-hint" id="lugar-hint-' + i + '"></span>';
+    html += '<span class="field-error">El lugar es obligatorio para modalidad presencial.</span>';
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+    return html;
+  }
+
+  function setEvtCount(n) {
+    n = Math.max(1, n);
+    while (evtCount < n) { 
+      evtContainer.insertAdjacentHTML('beforeend', evtBlockHTML(evtCount)); 
+      evtCount++; 
+    }
+    while (evtCount > n) { 
+      evtCount--; 
+      const el = document.getElementById('evt-' + evtCount); 
+      if (el) el.remove(); 
+    }
+    applyInheritance();
+    updateBadges();
+  }
+
+  function labelEvt(i) {
+    const tipo = val('tipo');
+    const denom = val('denom');
+    const operativo = val('operativo');
+    const parts = [];
+    if (tipo) parts.push(tipo);
+    if (denom) parts.push(denom);
+    if (operativo) parts.push(operativo);
+    if (parts.length === 0) return 'Sesión ' + (i + 1);
+    const base = parts.join(' - ');
+    return evtCount > 1 ? base + ' (' + (i + 1) + ')' : base;
+  }
+
+  function updateBadges() {
+    for (let i = 0; i < evtCount; i++) {
+      const b = document.getElementById('badge-' + i);
+      if (b) b.textContent = labelEvt(i);
+    }
+  }
+
+  function onModalidad(i) {
+    const m = document.getElementById('modalidad-' + i).value;
+    const label = document.getElementById('lugar-label-' + i);
+    const hint = document.getElementById('lugar-hint-' + i);
+    document.getElementById('grp-lugar-' + i).classList.remove('invalid');
+    if (m === 'Presencial') {
+      label.innerHTML = 'Lugar <span class="req">*</span>';
+      hint.textContent = '';
+    } else if (m === 'Virtual') {
+      label.innerHTML = 'Lugar <span class="opt">(opcional)</span>';
+      hint.textContent = 'Recomendamos reservar igualmente una sala para la actividad.';
+    } else {
+      label.innerHTML = 'Lugar';
+      hint.textContent = '';
+    }
+  }
+
+  function onMultiToggle() {
+    const on = document.getElementById('multi').checked;
+    document.getElementById('multiControls').classList.toggle('hidden', !on);
+    if (on) {
+      let q = parseInt(document.getElementById('cantEvt').value) || 2;
+      if (q < 2) q = 2;
+      document.getElementById('cantEvt').value = q;
+      setEvtCount(q);
+    } else {
+      document.getElementById('sameML').checked = false;
+      setEvtCount(1);
+    }
+  }
+
+  function onCantChange() {
+    let q = parseInt(document.getElementById('cantEvt').value);
+    if (isNaN(q)) return;
+    if (q < 2) q = 2;
+    setEvtCount(q);
+  }
+
+  function applyInheritance() {
+    const same = document.getElementById('sameML').checked && evtCount > 1;
+    for (let i = 0; i < evtCount; i++) {
+      const mod = document.getElementById('grp-modalidad-' + i);
+      const lug = document.getElementById('grp-lugar-' + i);
+      const note = document.getElementById('inherit-' + i);
+      const inherit = (i > 0 && same);
+      if (mod) mod.classList.toggle('hidden', inherit);
+      if (lug) lug.classList.toggle('hidden', inherit);
+      if (note) note.classList.toggle('hidden', !inherit);
+    }
+  }
+
+  function val(id) { const e = document.getElementById(id); return e ? e.value.trim() : ''; }
+  function fmt(d) { if (!d) return ''; const p = d.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+  function markInvalid(id) { const e = document.getElementById(id); if (e) e.classList.add('invalid'); }
+  function clearErrors() {
+    document.querySelectorAll('.form-group.invalid').forEach(e => e.classList.remove('invalid'));
+    const b = document.getElementById('alertBanner');
+    b.classList.remove('show'); b.classList.remove('ok');
+  }
+  function showBanner(msg) {
+    const b = document.getElementById('alertBanner');
+    b.classList.remove('ok');
+    b.textContent = msg; b.classList.add('show');
+    b.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  function showSuccess(msg) {
+    const b = document.getElementById('alertBanner');
+    b.classList.add('ok');
+    b.textContent = msg; b.classList.add('show');
+    b.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  function hideOutput() { document.getElementById('outputSection').classList.remove('show'); }
+
+  // Valida y devuelve un objeto con todos los datos, o null si falta algo.
+  function recolectarDatos() {
+    clearErrors();
+    const faltan = [];
+
+    const tipo = val('tipo');
+    if (!tipo) { markInvalid('grp-tipo'); faltan.push('Tipo de evento'); }
+
+    const operativo = val('operativo');
+
+    const denom = val('denom');
+    if (!denom) { markInvalid('grp-denom'); faltan.push('Denominación'); }
+
+    const same = document.getElementById('sameML').checked && evtCount > 1;
+    const evts = [];
+
+    for (let i = 0; i < evtCount; i++) {
+      const fecha = document.getElementById('fecha-' + i).value;
+      const horario = val('horario-' + i);
+      const asist = val('asistentes-' + i);
+      let modalidad = document.getElementById('modalidad-' + i).value;
+      let lugar = val('lugar-' + i);
+
+      if (i > 0 && same) {
+        modalidad = document.getElementById('modalidad-0').value;
+        lugar = val('lugar-0');
+      }
+
+      const tag = 'Sesión ' + (i + 1);
+      if (!fecha) { markInvalid('grp-fecha-' + i); faltan.push(tag + ': fecha'); }
+      if (!asist || Number(asist) <= 0) { markInvalid('grp-asistentes-' + i); faltan.push(tag + ': asistentes'); }
+
+      const owns = !(i > 0 && same);
+      if (owns) {
+        if (!modalidad) { markInvalid('grp-modalidad-' + i); faltan.push(tag + ': modalidad'); }
+        if (modalidad === 'Presencial' && !lugar) { markInvalid('grp-lugar-' + i); faltan.push(tag + ': lugar (presencial)'); }
+      }
+
+      evts.push({ sesion: i + 1, label: labelEvt(i), fecha, horario, asist, modalidad, lugar });
+    }
+
+    if (faltan.length) { showBanner('Faltan completar: ' + faltan.join(' · ') + '.'); hideOutput(); return null; }
+
+    return {
+      tipo, operativo, denom, evts,
+      tecnica: val('tecnica'),
+      catering: val('catering'),
+      observaciones: val('observaciones')
+    };
+  }
+
+  function generarCorreo() {
+    const datos = recolectarDatos();
+    if (!datos) return;
+    const { tipo, operativo, denom, evts, tecnica, catering, observaciones } = datos;
+    evts.forEach((e, idx) => {
+      const lbl = labelEvt(idx);
+      const hor = e.horario ? ', ' + e.horario : '';
+      generales += '• ' + lbl + ' — ' + fmt(e.fecha) + hor + ' — ' + e.modalidad + ' — ' + e.asist + ' asistentes\n';
+      if (e.modalidad === 'Presencial') {
+        salas += '• ' + lbl + ' — ' + fmt(e.fecha) + hor + ' — Lugar: ' + e.lugar + ' (' + e.asist + ' personas)\n';
+      } else {
+        const sug = e.lugar ? ' — Sala sugerida: ' + e.lugar : '';
+        salas += '• ' + lbl + ' — ' + fmt(e.fecha) + hor + ' — Virtual; sin sala obligatoria, se recomienda reservar una sala' + sug + ' (' + e.asist + ' personas)\n';
+      }
+    });
+
+    const linea = '─────────────────────────────────────────';
+
+    let body = 'Estimados,\n\n';
+    body += 'Por medio de la presente, la Coordinación de Operativos de la UEICEE solicita la gestión de requerimientos para ' + tipo + ' detalladas a continuación. Cada bloque indica el área a la que está dirigido.\n\n';
+    if (operativo) body += 'Operativo: ' + operativo + '\n';
+    body += 'Tipo de evento: ' + tipo + '\n';
+    body += 'Denominación: ' + denom + '\n\n';
+
+    body += linea + '\n';
+    body += 'CUESTIONES GENERALES\n';
+    body += 'Atención: Luis Zipitria (luis.zipitria@bue.edu.ar)\n';
+    body += linea + '\n';
+    body += generales.trimEnd() + '\n';
+    if (observaciones) body += '\nObservaciones / pendientes:\n' + observaciones + '\n';
+    body += '\n';
+
+    body += linea + '\n';
+    body += 'SALAS Y AGENDA\n';
+    body += 'Atención: UEICEE (ueicee@bue.edu.ar)\n';
+    body += linea + '\n';
+    body += salas.trimEnd() + '\n\n';
+    body += 'Solicitamos, asimismo, agendar los eventos por calendario (Calendar) e invitar a las personas que correspondan en cada caso.\n';
+    if (catering) body += '\nCatering:\n' + catering + '\n';
+    body += '\n';
+
+    body += linea + '\n';
+    body += 'REQUERIMIENTOS TÉCNICOS\n';
+    body += 'Atención: Sistemas (sistemas.ueicee@bue.edu.ar)\n';
+    body += linea + '\n';
+    body += (tecnica || 'Sin requerimientos técnicos especiales.') + '\n\n';
+
+    body += 'Quedamos a disposición por cualquier consulta.\n\n';
+    body += 'Saludos cordiales,\n';
+    body += 'Andrés Aguirre\n';
+    body += 'Coordinación de Operativos\n';
+    body += 'Unidad de Evaluación Integral de la Calidad y Equidad Educativa (UEICEE)\n';
+    body += 'Ministerio de Educación — GCBA';
+
+    let asunto;
+    const opePrefix = operativo ? operativo + ' — ' : '';
+    if (evtCount === 1) {
+      asunto = 'Solicitud de requerimientos — ' + opePrefix + tipo + ' ' + denom + ' (' + fmt(evts[0].fecha) + ')';
+    } else {
+      asunto = 'Solicitud de requerimientos — ' + opePrefix + tipo + ': ' + denom + ' (' + evtCount + ' sesiones)';
+    }
+
+    const mailto = 'mailto:luis.zipitria@bue.edu.ar,ueicee@bue.edu.ar,sistemas.ueicee@bue.edu.ar?cc=andres.aguirre@bue.edu.ar,azul.fourcade@bue.edu.ar&subject=' + encodeURIComponent(asunto) + '&body=' + encodeURIComponent(body);
+
+    document.getElementById('toLine').textContent = 'luis.zipitria@bue.edu.ar, ueicee@bue.edu.ar, sistemas.ueicee@bue.edu.ar';
+    document.getElementById('ccLine').textContent = 'andres.aguirre@bue.edu.ar, azul.fourcade@bue.edu.ar';
+    document.getElementById('subjectLine').textContent = asunto;
+    document.getElementById('bodyText').innerText = body;
+    document.getElementById('openMail').setAttribute('href', mailto);
+
+    currentBody = body;
+    currentDest = 'Para: luis.zipitria@bue.edu.ar, ueicee@bue.edu.ar, sistemas.ueicee@bue.edu.ar\nCC: andres.aguirre@bue.edu.ar, azul.fourcade@bue.edu.ar';
+
+    const cb = document.getElementById('copyBtn');
+    cb.classList.remove('done'); cb.textContent = 'Copiar cuerpo';
+
+    const out = document.getElementById('outputSection');
+    out.classList.add('show');
+    out.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function registrarEnPlanilla() {
+    const datos = recolectarDatos();
+    if (!datos) return;
+
+    if (!SHEET_ENDPOINT || SHEET_ENDPOINT.indexOf('http') !== 0) {
+      showBanner('Falta configurar la URL de la planilla. Pegá la URL del Apps Script en SHEET_ENDPOINT (arriba del script).');
+      return;
+    }
+
+    const btn = document.getElementById('sheetBtn');
+    btn.disabled = true; btn.classList.remove('done'); btn.textContent = 'Registrando…';
+
+    datos.solicitante = 'Andrés Aguirre';
+    datos.enviado = new Date().toISOString();
+
+    fetch(SHEET_ENDPOINT, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: new URLSearchParams({ payload: JSON.stringify(datos) })
+    })
+    .then(function () {
+      btn.classList.add('done'); btn.textContent = '✓ Registrado'; btn.disabled = false;
+      const n = datos.evts.length;
+      showSuccess('Registrado en la planilla (' + n + (n === 1 ? ' fila' : ' filas') + '). Abrila para verificar.');
+    })
+    .catch(function () {
+      btn.disabled = false; btn.textContent = 'Registrar en planilla';
+      showBanner('No se pudo conectar con la planilla. Verificá la URL del Apps Script y tu conexión.');
+    });
+  }
+
+  function copyText(text, onOk) {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(onOk).catch(() => fallbackCopy(text, onOk));
+    } else {
+      fallbackCopy(text, onOk);
+    }
+  }
+  function fallbackCopy(text, onOk) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.top = '-9999px';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try {
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (ok) onOk(); else alert('No se pudo copiar automáticamente. Seleccioná el texto y copialo manualmente (Ctrl+C).');
+    } catch (e) {
+      document.body.removeChild(ta);
+      alert('No se pudo copiar automáticamente. Seleccioná el texto y copialo manualmente (Ctrl+C).');
+    }
+  }
+  function copiarCuerpo() {
+    copyText(currentBody, function() {
+      const b = document.getElementById('copyBtn');
+      b.classList.add('done'); b.textContent = '✓ Copiado';
+    });
+  }
+  function copiarDest() { copyText(currentDest, function() {}); }
+
+  function limpiar() {
+    document.querySelectorAll('input[type="text"], input[type="date"], input[type="number"], textarea').forEach(el => el.value = '');
+    document.querySelectorAll('select').forEach(el => el.value = '');
+    document.getElementById('multi').checked = false;
+    document.getElementById('sameML').checked = false;
+    document.getElementById('multiControls').classList.add('hidden');
+    document.getElementById('cantEvt').value = 2;
+    evtContainer.innerHTML = ''; evtCount = 0; setEvtCount(1);
+    const sb = document.getElementById('sheetBtn');
+    sb.disabled = false; sb.classList.remove('done'); sb.textContent = 'Registrar en planilla';
+    updateTypeUI();
+    clearErrors(); hideOutput();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  updateTypeUI();
+</script>
+
+</body>
+</html>

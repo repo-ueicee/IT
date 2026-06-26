@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Enviar Emails Personalizados</title>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <style>
+    /* Estilos CSS... */
+  </style>
+</head>
+<body>
+  <h1>Enviar Emails Personalizados</h1>
+  
+  <!-- Formulario HTML... -->
+  
+  <script>
+    // Configuración de EmailJS
+    emailjs.init('YOUR_PUBLIC_KEY');
+
+    function agregarDestinatario() {
+      // Código para agregar destinatario...
+    }
+    
+    function enviarEmails() {
+      var remitente = document.getElementById('remitente').value;
+      var asunto = document.getElementById('asunto').value;
+      var cuerpo = document.getElementById('cuerpo').value;
+      
+      var filas = document.querySelectorAll('#tablaDestinatarios tbody tr');
+      filas.forEach(function(fila) {
+        var email = fila.cells[0].textContent;
+        var nombre = fila.cells[1].textContent;
+        var adjunto = fila.cells[2].textContent;
+        
+        var cuerpoPersonalizado = cuerpo.replace('{nombre}', nombre);
+        
+        var templateParams = {
+          to_email: email,
+          from_name: remitente,
+          subject: asunto,
+          message: cuerpoPersonalizado,
+          attachment: adjunto
+        };
+        
+        emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams)
+          .then(function(response) {
+            console.log('Email enviado a ' + email + ' con éxito!', response);
+          }, function(error) {
+            console.error('Error al enviar email a ' + email, error);
+          });
+      });
+    }
+  </script>
+</body>
+</html>

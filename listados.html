@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Listados Nominales</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<!-- zip.js no requerido: se usa ZipCrypto nativo de JSZip -->
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f4f0;--surface:#fff;--s2:#eeedea;--border:#e0ddd5;--border2:#c5c2b8;
+  --text:#18170f;--t2:#6b6860;--t3:#a09d94;
+  --ok-bg:#e6f4ed;--ok:#186b3a;--warn-bg:#fef5e0;--warn:#8a5f08;
+  --info-bg:#e6eefb;--info:#1847a8;--danger-bg:#fdecea;--danger:#a8180f;
+  --r:10px;--rs:6px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:240px;flex-shrink:0;background:var(--text);color:#fff;padding:2rem 1.5rem;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.main{flex:1;min-width:0;padding:2.5rem 3rem}
+.s-tag{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:1.25rem}
+.s-title{font-size:17px;font-weight:500;line-height:1.4;margin-bottom:2rem;color:#fff}
+.s-section{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.25);margin:1.25rem 0 4px 8px}
+.s-steps{display:flex;flex-direction:column;gap:2px}
+.s-step{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:var(--rs);font-size:13px;color:rgba(255,255,255,.35);transition:.15s}
+.s-step.active{color:#fff;background:rgba(255,255,255,.1)}
+.s-step.done{color:rgba(255,255,255,.55)}
+.s-num{width:21px;height:21px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.s-step.done .s-num{background:rgba(255,255,255,.18);border-color:transparent}
+.s-foot{margin-top:auto;padding-top:1.5rem;font-size:11px;color:rgba(255,255,255,.22);line-height:1.7}
+.panel{display:none;max-width:620px}
+.panel.active{display:block;animation:up .18s ease}
+@keyframes up{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.p-tag{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin-bottom:5px}
+.p-title{font-size:26px;font-weight:500;margin-bottom:1.75rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;margin-bottom:1rem}
+.card-title{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin-bottom:1.25rem}
+.mode-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:0}
+.mode-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:1.5rem 1.25rem;cursor:pointer;transition:.15s;user-select:none}
+.mode-card:hover{border-color:var(--border2);background:var(--s2)}
+.mode-card.selected{border-color:var(--text);background:var(--s2)}
+.mode-icon{font-size:28px;margin-bottom:.75rem}
+.mode-name{font-size:15px;font-weight:600;margin-bottom:4px}
+.mode-desc{font-size:12px;color:var(--t3);line-height:1.5}
+.field{margin-bottom:1.1rem}
+.field:last-child{margin-bottom:0}
+.field>label{display:block;font-size:13px;font-weight:500;margin-bottom:5px}
+.hint{font-size:12px;color:var(--t3);margin-top:4px;line-height:1.5}
+input[type=text],select,input[type=number]{display:block;width:100%;padding:9px 12px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);background:var(--surface);border:1px solid var(--border2);border-radius:var(--rs);outline:none;transition:.15s;-webkit-appearance:none;appearance:none}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23a09d94' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;cursor:pointer}
+input[type=text]:focus,select:focus{border-color:var(--text);box-shadow:0 0 0 3px rgba(24,23,15,.06)}
+.mono-hint{font-family:'DM Mono',monospace;font-size:11.5px;color:var(--t2);background:var(--s2);border-radius:var(--rs);padding:6px 10px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upload-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:2.25rem 2rem;text-align:center;cursor:pointer;transition:.15s;background:var(--surface)}
+.upload-zone:hover,.upload-zone.drag{background:var(--s2);border-color:#888}
+.u-icon{font-size:32px;margin-bottom:.65rem}
+.u-main{font-size:15px;font-weight:500;margin-bottom:3px}
+.u-sub{font-size:13px;color:var(--t3)}
+.fp{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-top:8px}
+.fp-ic{font-size:19px}
+.fp-name{font-size:14px;font-weight:500}
+.fp-meta{font-size:12px;color:var(--t3);margin-top:2px}
+.file-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.file-item{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);font-size:13px}
+.file-item-name{flex:1;font-weight:500}
+.file-item-meta{font-size:11px;color:var(--t3)}
+.file-item-del{cursor:pointer;color:var(--t3);font-size:16px;padding:2px 4px;border-radius:4px;transition:.1s}
+.file-item-del:hover{color:var(--danger);background:var(--danger-bg)}
+.cols-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px}
+.col-lbl{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:13px;cursor:pointer;transition:.1s;user-select:none;word-break:break-word}
+.col-lbl:hover{background:var(--s2)}
+.col-lbl.on{background:var(--s2);border-color:var(--border2)}
+.col-lbl input{cursor:pointer;accent-color:var(--text);flex-shrink:0}
+.col-lbl.partial{border-color:#f5d98a;background:var(--warn-bg)}
+.col-lbl.partial.on{border-color:#e8c55a}
+.partial-badge{font-size:10px;color:var(--warn);background:var(--warn-bg);border:1px solid #f5d98a;border-radius:99px;padding:1px 6px;margin-left:auto;white-space:nowrap;flex-shrink:0}
+.custom-col-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.custom-col-item{background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:12px 14px}
+.custom-col-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.custom-col-name{font-size:13px;font-weight:600;flex:1}
+.custom-col-type{font-size:11px;color:var(--t3);background:var(--surface);border:1px solid var(--border);border-radius:99px;padding:2px 8px}
+.custom-col-del{cursor:pointer;color:var(--t3);font-size:15px;padding:2px 4px;border-radius:4px;transition:.1s}
+.custom-col-del:hover{color:var(--danger);background:var(--danger-bg)}
+.opts-list{display:flex;flex-wrap:wrap;gap:6px}
+.opt-tag{display:flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border);border-radius:99px;padding:3px 10px;font-size:12px}
+.opt-tag-del{cursor:pointer;color:var(--t3);font-size:13px;line-height:1}
+.opt-tag-del:hover{color:var(--danger)}
+.add-opt-row{display:flex;gap:6px;margin-top:8px}
+.add-opt-row input{flex:1}
+.actions{display:flex;gap:8px;margin-top:1.5rem;flex-wrap:wrap}
+.btn{padding:10px 22px;border-radius:var(--rs);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;border:none;transition:.15s;white-space:nowrap}
+.btn-dk{background:var(--text);color:#fff}
+.btn-dk:hover{background:#333}
+.btn-dk:disabled{background:var(--border2);cursor:not-allowed;color:var(--surface)}
+.btn-out{background:transparent;border:1px solid var(--border2);color:var(--text)}
+.btn-out:hover{background:var(--s2)}
+.btn-sm{padding:7px 14px;font-size:13px}
+.btn-add{background:var(--s2);border:1px solid var(--border2);color:var(--text);font-size:13px;padding:7px 14px;border-radius:var(--rs);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;transition:.15s}
+.btn-add:hover{background:var(--border)}
+.alert{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:var(--rs);font-size:13px;line-height:1.5;margin-bottom:1rem}
+.alert-warn{background:var(--warn-bg);color:var(--warn);border:1px solid #f5d98a}
+.alert-ok{background:var(--ok-bg);color:var(--ok);border:1px solid #b3ddc3}
+.alert-info{background:var(--info-bg);color:var(--info);border:1px solid #b3c9f4}
+.a-ic{font-size:15px;flex-shrink:0;margin-top:1px}
+.dup-opts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.dup-btn{padding:5px 13px;border-radius:var(--rs);font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;transition:.1s}
+.dup-btn.on{background:var(--warn);color:#fff;border-color:var(--warn)}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.25rem}
+.m-lbl{font-size:12px;color:var(--t3);margin-bottom:4px}
+.m-val{font-size:26px;font-weight:500;line-height:1}
+.tbl-wrap{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--surface);margin-bottom:.5rem}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:var(--s2)}
+th{padding:9px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--t3);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:8px 14px;border-bottom:1px solid var(--border);color:var(--text)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--s2)}
+.mono{font-family:'DM Mono',monospace;font-size:11px;color:var(--t2)}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:var(--info-bg);color:var(--info)}
+.tbl-more{padding:7px 14px;font-size:12px;color:var(--t3)}
+.toggle-row{display:flex;align-items:center;gap:10px;font-size:13px}
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--border2);border-radius:99px;cursor:pointer;transition:.2s}
+.toggle-slider:before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.toggle input:checked+.toggle-slider{background:var(--text)}
+.toggle input:checked+.toggle-slider:before{transform:translateX(16px)}
+.radio-group{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.radio-lbl{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rs);cursor:pointer;font-size:13px;transition:.1s}
+.radio-lbl:hover{background:var(--s2)}
+.radio-lbl.on{background:var(--s2);border-color:var(--border2)}
+.radio-lbl input{margin-top:2px;cursor:pointer;accent-color:var(--text);flex-shrink:0}
+.radio-lbl-text .sub{font-size:12px;color:var(--t3);margin-top:2px}
+.prog-wrap{height:4px;background:var(--border);border-radius:99px;overflow:hidden;margin:.75rem 0 1.5rem}
+.prog-bar{height:100%;background:var(--text);border-radius:99px;transition:width .2s;width:0%}
+.log{font-size:13px;color:var(--t2);line-height:2.1;max-height:300px;overflow-y:auto}
+.log-ok{color:var(--ok)}
+.done-wrap{margin-top:2rem}
+.done-check{width:44px;height:44px;background:var(--ok-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:1rem}
+.pwd-section{margin-top:1.5rem}
+.pwd-table-wrap{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--surface);margin-top:.5rem}
+.pwd-table{width:100%;border-collapse:collapse;font-size:13px}
+.pwd-table th{padding:9px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--t3);border-bottom:1px solid var(--border);background:var(--s2)}
+.pwd-table td{padding:8px 14px;border-bottom:1px solid var(--border)}
+.pwd-table tr:last-child td{border-bottom:none}
+.pwd-mono{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;letter-spacing:.04em;color:var(--text)}
+.copy-all-btn{font-size:12px;padding:5px 12px;border-radius:var(--rs);border:1px solid var(--border2);background:var(--surface);cursor:pointer;font-family:'DM Sans',sans-serif;transition:.1s;margin-left:8px}
+.copy-all-btn:hover{background:var(--s2)}
+.divider{border:none;border-top:1px solid var(--border);margin:1.25rem 0}
+@media(max-width:700px){.layout{flex-direction:column}.sidebar{width:100%;height:auto;position:relative}.main{padding:1.5rem}.metrics{grid-template-columns:1fr 1fr}.mode-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+  <div class="s-tag">Herramienta institucional</div>
+  <div class="s-title">Listados Nominales</div>
+  <nav class="s-steps" id="sNav"></nav>
+  <div class="s-foot">Procesamiento local.<br>Los datos no salen de tu navegador.</div>
+</aside>
+<main class="main" id="mainArea"></main>
+</div>
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+var mode=null,step=0;
+var splitData={rows:[],headers:[]};
+var unifyFiles=[],mergeFiles=[];
+var splitCfg={},unifyCfg={},mergeCfg={};
+var customCols=[],newColType='open',newColOpts=[],customColCounter=0;
+var dupChoice='first';
+
+var SPLIT_STEPS=['Modo','Cargar','Configurar','Col. extra','Revisar','Descargar'];
+var UNIFY_STEPS=['Modo','Cargar','Configurar','Col. extra','Revisar','Descargar'];
+var MERGE_STEPS=['Modo','Cargar','Configurar','Revisar','Descargar'];
+
+function renderNav(){
+  var steps=mode==='unify'?UNIFY_STEPS:mode==='merge'?MERGE_STEPS:SPLIT_STEPS;
+  var html='';
+  if(mode) html+='<div class="s-section">'+(mode==='split'?'División':mode==='merge'?'Combinar':'Unificación')+'</div>';
+  for(var i=0;i<steps.length;i++){
+    var cls='s-step'+(step===i?' active':step>i?' done':'');
+    html+='<div class="'+cls+'"><div class="s-num">'+(step>i?'&#10003;':(i+1))+'</div> '+steps[i]+'</div>';
+  }
+  document.getElementById('sNav').innerHTML=html;
+}
+
+function show(html){document.getElementById('mainArea').innerHTML=html;renderNav();}
+
+// ─── HOME ────────────────────────────────────────────────────────────────────
+function showHome(){
+  step=0;mode=null;customCols=[];
+  show('<div class="panel active">'
+    +'<div class="p-tag">Inicio</div>'
+    +'<div class="p-title">&#191;Qu&#233; quer&#233;s hacer?</div>'
+    +'<div class="mode-grid">'
+    +'<div class="mode-card" id="mc-split" onclick="selectMode(\'split\')">'
+    +'<div class="mode-icon">&#9999;&#65039;</div><div class="mode-name">Dividir</div>'
+    +'<div class="mode-desc">Carg&#225; un Excel y genera archivos separados agrupados por variables.</div></div>'
+    +'<div class="mode-card" id="mc-unify" onclick="selectMode(\'unify\')">'
+    +'<div class="mode-icon">&#128203;</div><div class="mode-name">Unificar</div>'
+    +'<div class="mode-desc">Comb&#237; m&#250;ltiples Excels en un solo archivo con control de columnas.</div></div>'
+    +'<div class="mode-card" id="mc-merge" onclick="selectMode(\'merge\')">'
+    +'<div class="mode-icon">&#128279;</div><div class="mode-name">Combinar</div>'
+    +'<div class="mode-desc">Enriquec&#233; un Excel madre con columnas de otros archivos (tipo JOIN).</div></div>'
+    +'</div>'
+    +'<div class="actions"><button class="btn btn-dk" id="btnMode" disabled onclick="goAfterMode()">Continuar &rarr;</button></div>'
+    +'</div>');
+}
+
+function selectMode(m){
+  mode=m;
+  ['split','unify','merge'].forEach(function(x){document.getElementById('mc-'+x).classList.toggle('selected',x===m)});
+  document.getElementById('btnMode').disabled=false;
+}
+
+function goAfterMode(){
+  if(!mode)return; step=1;
+  if(mode==='split')showSplitUpload();
+  else if(mode==='unify')showUnifyUpload();
+  else showMergeUpload();
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function selCols(gridId){var a=[];document.getElementById(gridId).querySelectorAll('input:checked').forEach(function(x){a.push(x.value)});return a;}
+function dedupRows(rows,col,mode){
+  if(mode==='all')return rows.slice();
+  var seen={};
+  rows.forEach(function(r,i){var k=String(r[col]||'').trim().toLowerCase();if(!(k in seen)||mode==='last')seen[k]=i;});
+  var idx=[];for(var k in seen)idx.push(seen[k]);
+  return idx.sort(function(a,b){return a-b}).map(function(i){return rows[i]});
+}
+function groupBy(rows,col){
+  var m={};rows.forEach(function(r){var k=String(r[col]||'').trim();if(!m[k])m[k]=[];m[k].push(r);});return m;
+}
+function sortRows(rows,sortCol,cols){
+  var sk=sortCol||(cols&&cols[0])||null;if(!sk)return rows.slice();
+  return rows.slice().sort(function(a,b){return String(a[sk]||'').localeCompare(String(b[sk]||''),'es');});
+}
+function truncSheetName(s){s=String(s||'').replace(/[:\\/?\*\[\]]/g,'_');return s.length>31?s.substring(0,31):s;}
+function sanitizeFolderName(s){return String(s||'').replace(/[\\/\/:*?"<>|]/g,'_').trim()||'Sin nombre';}
+function setDupChoice(lbl,val){
+  dupChoice=val;
+  var grp=lbl.closest('.card')||lbl.closest('.radio-group');
+  if(grp)grp.querySelectorAll('.radio-lbl').forEach(function(l){l.classList.remove('on')});
+  lbl.classList.add('on');
+}
+function colsCheckboxes(headers,partial){
+  var html='';
+  headers.forEach(function(h){
+    var p=partial&&partial.indexOf(h)>=0;
+    html+='<label class="col-lbl on'+(p?' partial':'')+'">'
+      +'<input type="checkbox" checked value="'+esc(h)+'"> '+esc(h)
+      +(p?'<span class="partial-badge">Parcial</span>':'')+'</label>';
+  });
+  return html||'<div style="color:var(--t3);font-size:13px">Sin columnas.</div>';
+}
+function genPassword(){
+  var c='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789',p='';
+  for(var i=0;i<7;i++)p+=c[Math.floor(Math.random()*c.length)];return p;
+}
+
+// buildWorksheetData: AOA approach so custom empty cols always appear
+// Convert Excel serial date numbers to DD/MM/YYYY strings
+// Excel serial: days since 1900-01-01 (with Lotus 1-2-3 bug: 1900 treated as leap year)
+function excelSerialToDate(serial){
+  var n=parseInt(serial);
+  if(isNaN(n)||n<1||n>100000)return serial; // not a plausible date serial
+  // Excel epoch: Dec 30 1899 (accounting for Lotus bug)
+  var d=new Date(Date.UTC(1899,11,30)+(n*86400000));
+  var dd=String(d.getUTCDate()).padStart(2,'0');
+  var mm=String(d.getUTCMonth()+1).padStart(2,'0');
+  var yyyy=d.getUTCFullYear();
+  return dd+'/'+mm+'/'+yyyy;
+}
+
+// Fix mixed date columns: some cells are "YYYY-MM-DD", some are serial numbers
+function formatDateDDMMYYYY(d){
+  var dd=String(d.getDate()).padStart(2,'0');
+  var mm=String(d.getMonth()+1).padStart(2,'0');
+  var yyyy=d.getFullYear();
+  return dd+'/'+mm+'/'+yyyy;
+}
+
+function fixDates(rows){
+  if(!rows.length)return rows;
+  // Detect date columns: contain Date objects OR ISO strings YYYY-MM-DD
+  var dateCols={};
+  var isoRe=/^\d{4}-\d{2}-\d{2}(T.*)?$/;
+  rows.forEach(function(r){
+    Object.keys(r).forEach(function(k){
+      var v=r[k];
+      if(v instanceof Date||(typeof v==='string'&&isoRe.test(v)))dateCols[k]=true;
+    });
+  });
+  if(!Object.keys(dateCols).length)return rows;
+  return rows.map(function(r){
+    var out=Object.assign({},r);
+    Object.keys(dateCols).forEach(function(k){
+      var v=out[k];
+      if(v instanceof Date&&!isNaN(v)){
+        out[k]=formatDateDDMMYYYY(v);
+      } else if(typeof v==='string'&&isoRe.test(v)){
+        var d=new Date(v);
+        if(!isNaN(d))out[k]=formatDateDDMMYYYY(d);
+      }
+    });
+    return out;
+  });
+}
+
+function buildWorksheetData(rows,cols){
+  var allCols=cols.slice();
+  customCols.forEach(function(cc){allCols.push(cc.label);});
+  var aoa=[allCols];
+  rows.forEach(function(r){
+    var row=[];
+    allCols.forEach(function(h,ci){
+      row.push(ci>=cols.length?'':(r[h]!==undefined?r[h]:''));
+    });
+    aoa.push(row);
+  });
+  var ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=allCols.map(function(h){return{wch:Math.max(10,Math.min(40,String(h).length+4))};});
+  return ws;
+}
+
+// patchDropdowns: reads actual row count per sheet from XML
+function patchDropdowns(xlsxBuf,cols){
+  var dropCols=customCols.filter(function(cc){return cc.type==='dropdown'&&cc.options.length>0;});
+  if(!dropCols.length)return Promise.resolve(new Uint8Array(xlsxBuf));
+  return JSZip.loadAsync(xlsxBuf).then(function(zip){
+    var sheets=Object.keys(zip.files).filter(function(p){return /^xl\/worksheets\/sheet\d+\.xml$/.test(p);});
+    return Promise.all(sheets.map(function(path){
+      return zip.file(path).async('string').then(function(xml){
+        var actualRows=0;
+        var m=xml.match(/dimension ref="[A-Z]+1:[A-Z]+(\d+)"/);
+        if(m)actualRows=parseInt(m[1])-1;
+        else{var rm=xml.match(/<row /g);actualRows=rm?Math.max(0,rm.length-1):0;}
+        if(actualRows<=0)return;
+        var vXml='<dataValidations count="'+dropCols.length+'">';
+        customCols.forEach(function(cc,j){
+          if(cc.type!=='dropdown'||!cc.options.length)return;
+          var colLetter=XLSX.utils.encode_col(cols.length+j);
+          var sqref=colLetter+'2:'+colLetter+(actualRows+1);
+          var listStr=cc.options.map(function(o){return o.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}).join(',');
+          vXml+='<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="'+sqref+'">';
+          vXml+='<formula1>&quot;'+listStr+'&quot;</formula1></dataValidation>';
+        });
+        vXml+='</dataValidations>';
+        xml=xml.replace(/<dataValidations[\s\S]*?<\/dataValidations>/g,'');
+        xml=xml.replace('</worksheet>',vXml+'</worksheet>');
+        zip.file(path,xml);
+      });
+    })).then(function(){return zip.generateAsync({type:'uint8array',compression:'DEFLATE'});});
+  });
+}
+
+// addFileToFolder: wraps xlsx in encrypted per-file zip if password given
+// ── ZipCrypto implementation (pure JS, compatible with Windows nativo) ────────
+var _CRC32T=(function(){var t=new Uint32Array(256);for(var i=0;i<256;i++){var c=i;for(var j=0;j<8;j++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[i]=c;}return t;})();
+function _crc32buf(d){var c=0xFFFFFFFF;for(var i=0;i<d.length;i++)c=(_CRC32T[(c^d[i])&0xFF]^(c>>>8))>>>0;return(c^0xFFFFFFFF)>>>0;}
+function _crc32b(crc,b){return(_CRC32T[(crc^b)&0xFF]^(crc>>>8))>>>0;}
+function _zkeys(pwd){var k=[0x12345678,0x23456789,0x34567890];for(var i=0;i<pwd.length;i++)_zupd(k,pwd.charCodeAt(i));return k;}
+function _zupd(k,b){k[0]=_crc32b(k[0],b);k[1]=(k[1]+(k[0]&0xFF))>>>0;k[1]=(Math.imul(k[1],0x08088405)+1)>>>0;k[2]=_crc32b(k[2],(k[1]>>>24)&0xFF);}
+function _zsb(k){var t=((k[2]&0xFFFF)|2)>>>0;return((t*(t^1))>>>8)&0xFF;}
+function _zenc(k,b){var x=_zsb(k);_zupd(k,b);return(b^x)&0xFF;}
+function _zcrypt(data,pwd,crc){
+  var k=_zkeys(pwd),out=new Uint8Array(12+data.length);
+  for(var i=0;i<11;i++)out[i]=_zenc(k,(Math.random()*256)|0);
+  out[11]=_zenc(k,(crc>>>24)&0xFF);
+  for(var i=0;i<data.length;i++)out[12+i]=_zenc(k,data[i]);
+  return out;
+}
+function _u16(v){return new Uint8Array([v&0xFF,(v>>8)&0xFF]);}
+function _u32(v){v=v>>>0;return new Uint8Array([v&0xFF,(v>>8)&0xFF,(v>>16)&0xFF,(v>>24)&0xFF]);}
+function _cat(arrays){
+  var len=0;for(var i=0;i<arrays.length;i++)len+=arrays[i].length;
+  var out=new Uint8Array(len),pos=0;
+  for(var i=0;i<arrays.length;i++){out.set(arrays[i],pos);pos+=arrays[i].length;}
+  return out;
+}
+function buildZipCrypto(entries,password){
+  // entries: [{name:string, data:Uint8Array}]
+  var now=new Date();
+  var dt=((now.getHours()<<11)|(now.getMinutes()<<5)|((now.getSeconds()/2)|0))&0xFFFF;
+  var dd=(((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate())&0xFFFF;
+  var parts=[],cds=[],offset=0;
+  for(var ei=0;ei<entries.length;ei++){
+    var nm=entries[ei].name;
+    var data=entries[ei].data instanceof Uint8Array?entries[ei].data:new Uint8Array(entries[ei].data);
+    var nameBytes=new TextEncoder().encode(nm);
+    var crc=_crc32buf(data);
+    var enc=_zcrypt(data,password,crc);
+    var lh=_cat([
+      new Uint8Array([0x50,0x4B,0x03,0x04]),
+      _u16(20),_u16(1),_u16(0),_u16(dt),_u16(dd),
+      _u32(crc),_u32(enc.length),_u32(data.length),
+      _u16(nameBytes.length),_u16(0),
+      nameBytes,enc
+    ]);
+    var cd=_cat([
+      new Uint8Array([0x50,0x4B,0x01,0x02]),
+      _u16(20),_u16(20),_u16(1),_u16(0),_u16(dt),_u16(dd),
+      _u32(crc),_u32(enc.length),_u32(data.length),
+      _u16(nameBytes.length),_u16(0),_u16(0),_u16(0),_u16(0),_u32(0),_u32(offset),
+      nameBytes
+    ]);
+    parts.push(lh);cds.push(cd);offset+=lh.length;
+  }
+  var cdBuf=_cat(cds);
+  var eocd=_cat([
+    new Uint8Array([0x50,0x4B,0x05,0x06]),
+    _u16(0),_u16(0),_u16(entries.length),_u16(entries.length),
+    _u32(cdBuf.length),_u32(offset),_u16(0)
+  ]);
+  return _cat([...parts,cdBuf,eocd]);
+}
+
+function addFileToFolder(folder,baseName,xlsxBytes,filePwd){
+  var arr=xlsxBytes instanceof Uint8Array?xlsxBytes:new Uint8Array(xlsxBytes);
+  if(!filePwd){
+    folder.file(baseName+'.xlsx',arr);
+    return Promise.resolve(baseName+'.xlsx');
+  }
+  // Build ZipCrypto-encrypted inner ZIP (abre en Windows nativo sin software adicional)
+  var innerZip=buildZipCrypto([{name:baseName+'.xlsx',data:arr}],filePwd);
+  folder.file(baseName+'.zip',innerZip);
+  return Promise.resolve(baseName+'.zip');
+}
+
+function showProgress(tag){
+  show('<div class="panel active">'
+    +'<div class="p-tag">'+tag+'</div><div class="p-title">Generando...</div>'
+    +'<div class="prog-wrap"><div class="prog-bar" id="progBar"></div></div>'
+    +'<div class="log" id="logArea"></div><div id="doneArea"></div></div>');
+}
+
+function showDone(title,sub,url,filename,zipPwd,passwordTable){
+  var pwdHtml='';
+  if(zipPwd){
+    pwdHtml+='<div class="pwd-section"><div style="font-size:13px;font-weight:600;margin-bottom:6px">Contrase&#241;a del ZIP</div>'
+      +'<div class="mono-hint" style="font-size:14px;letter-spacing:.05em">'+esc(zipPwd)+'</div></div>';
+  }
+  if(passwordTable&&passwordTable.length){
+    var rows=passwordTable.map(function(r){
+      return'<tr><td class="mono">'+esc(r.file)+'</td><td><span class="pwd-mono">'+esc(r.password)+'</span></td></tr>';
+    }).join('');
+    var csvData=passwordTable.map(function(r){return'"'+r.file+'","'+r.password+'"';}).join('\n');
+    csvData='Archivo,Contrasena\n'+csvData;
+    var csvBlob=new Blob([csvData],{type:'text/csv'});
+    var csvUrl=URL.createObjectURL(csvBlob);
+    pwdHtml+='<div class="pwd-section">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+      +'<div style="font-size:13px;font-weight:600">Contrase&#241;as por archivo</div>'
+      +'<a href="'+csvUrl+'" download="contrasenas.csv" class="copy-all-btn">&#8595; Exportar CSV</a>'
+      +'</div>'
+      +'<div class="pwd-table-wrap"><table class="pwd-table"><thead><tr><th>Archivo</th><th>Contrase&#241;a</th></tr></thead>'
+      +'<tbody>'+rows+'</tbody></table></div></div>';
+  }
+  document.getElementById('doneArea').innerHTML='<div class="done-wrap">'
+    +'<div class="done-check">&#10003;</div>'
+    +'<div style="font-size:18px;font-weight:500;margin-bottom:3px">'+esc(title)+'</div>'
+    +'<div style="font-size:13px;color:var(--t3);margin-bottom:1.25rem">'+esc(sub)+'</div>'
+    +'<div class="actions">'
+    +'<button class="btn btn-dk" onclick="triggerDownload(\''+encodeURIComponent(url)+'\',\''+encodeURIComponent(filename)+'\')">&#8595; Descargar</button>'
+    +'<button class="btn btn-out" onclick="showHome()">Volver al inicio</button>'
+    +'</div>'+pwdHtml+'</div>';
+  document.getElementById('progBar').style.width='100%';
+}
+
+function triggerDownload(url,filename){
+  var a=document.createElement('a');a.href=decodeURIComponent(url);a.download=decodeURIComponent(filename);a.click();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SPLIT
+// ═══════════════════════════════════════════════════════════════════
+function showSplitUpload(){
+  step=1;
+  show('<div class="panel active"><div class="p-tag">Divisi&#243;n &middot; Paso 1 de 5</div><div class="p-title">Cargar archivo</div>'
+    +'<div class="upload-zone" id="dz"><div class="u-icon">&#128194;</div>'
+    +'<div class="u-main">Arrastr&#225; tu archivo o hac&#233; clic para buscarlo</div>'
+    +'<div class="u-sub">.xlsx &middot; .xls &middot; .csv</div>'
+    +'<input type="file" id="fi" accept=".xlsx,.xls,.csv" style="display:none"></div>'
+    +'<div id="fpArea"></div>'
+    +'<div class="actions"><button class="btn btn-out" onclick="showHome()">&larr; Volver</button>'
+    +'<button class="btn btn-dk" id="btnSU" disabled onclick="showSplitConfig()">Continuar &rarr;</button></div></div>');
+  document.getElementById('dz').onclick=function(){document.getElementById('fi').click();};
+  document.getElementById('dz').ondragover=function(e){e.preventDefault();this.classList.add('drag');};
+  document.getElementById('dz').ondragleave=function(){this.classList.remove('drag');};
+  document.getElementById('dz').ondrop=function(e){e.preventDefault();this.classList.remove('drag');loadSplitFile(e.dataTransfer.files[0]);};
+  document.getElementById('fi').onchange=function(e){loadSplitFile(e.target.files[0]);};
+}
+
+function loadSplitFile(file){
+  if(!file)return;
+  var r=new FileReader();
+  r.onload=function(e){
+    var wb=XLSX.read(e.target.result,{type:'binary',cellDates:true});
+    var ws=wb.Sheets[wb.SheetNames[0]];
+    splitData.rows=fixDates(XLSX.utils.sheet_to_json(ws,{defval:''}));
+    splitData.headers=splitData.rows.length?Object.keys(splitData.rows[0]):[];
+    document.getElementById('fpArea').innerHTML='<div class="fp"><div class="fp-ic">&#128196;</div><div>'
+      +'<div class="fp-name">'+esc(file.name)+'</div>'
+      +'<div class="fp-meta">'+splitData.rows.length.toLocaleString()+' filas &middot; '+splitData.headers.length+' columnas</div>'
+      +'</div></div>';
+    document.getElementById('btnSU').disabled=false;
+  };
+  r.readAsBinaryString(file);
+}
+
+function showSplitConfig(){
+  step=2;
+  var h=splitData.headers;
+  var so=h.map(function(x){return'<option value="'+esc(x)+'">'+esc(x)+'</option>';}).join('');
+  var sob='<option value="">&#8212; ninguna &#8212;</option>'+so;
+  show('<div class="panel active"><div class="p-tag">Divisi&#243;n &middot; Paso 2 de 5</div><div class="p-title">Configurar</div>'
+    +'<div class="card"><div class="card-title">Identificaci&#243;n</div>'
+    +'<div class="field"><label>Nombre del conjunto</label>'
+    +'<input type="text" id="folderName" placeholder="ej: Turno ma&#241;ana 2026" autocomplete="off" oninput="updateSplitHints()">'
+    +'<div class="mono-hint" id="hFolder">&#128193; Listados nominales - ...</div></div>'
+    +'<div class="field"><label>Variable identificadora <span style="font-weight:400;color:var(--t3)">(duplicados)</span></label>'
+    +'<select id="idCol">'+so+'</select></div></div>'
+    +'<div class="card"><div class="card-title">Agrupamiento y estructura</div>'
+    +'<div class="field"><label>Variable de agrupamiento 1 <span style="font-weight:400;color:var(--t3)">(un archivo por valor)</span></label>'
+    +'<select id="g1" onchange="updateSplitHints()">'+so+'</select></div>'
+    +'<div class="field"><label>Variable de agrupamiento 2 <span style="font-weight:400;color:var(--t3)">(en el nombre del archivo)</span></label>'
+    +'<select id="g2" onchange="updateSplitHints()">'+sob+'</select></div>'
+    +'<div class="field"><label>Estructura del archivo</label>'
+    +'<div class="radio-group">'
+    +'<label class="radio-lbl on" onclick="setSplitStruct(this,\'single\')">'
+    +'<input type="radio" name="struct" value="single" checked><div class="radio-lbl-text"><div>Una hoja por archivo</div></div></label>'
+    +'<label class="radio-lbl" onclick="setSplitStruct(this,\'sheets\')">'
+    +'<input type="radio" name="struct" value="sheets"><div class="radio-lbl-text"><div>M&#250;ltiples hojas por archivo</div><div class="sub">Dentro de cada archivo, una hoja por valor de una tercera variable.</div></div></label>'
+    +'</div></div>'
+    +'<div id="sheetVarWrap" style="display:none">'
+    +'<div class="field"><label>Variable para dividir en hojas</label>'
+    +'<select id="sheetVar" onchange="updateSheetNameHint()">'+so+'</select></div>'
+    +'<div class="field"><label>Prefijo del nombre de hoja <span style="font-weight:400;color:var(--t3)">(opcional)</span></label>'
+    +'<input type="text" id="sheetPrefix" placeholder="ej: Turno &mdash; dej&#225; vac&#237;o para usar solo el valor" autocomplete="off" oninput="updateSheetNameHint()">'
+    +'<div class="mono-hint" id="hSheet">Hoja: [valor de la variable]</div></div></div>'
+    +'<div class="mono-hint" id="hFile">&#128196; Listado - [grupo1].xlsx</div></div>'
+    +'<div class="card"><div class="card-title">Campos a incluir</div>'
+    +'<div class="cols-grid" id="colsGrid">'+colsCheckboxes(h,[])+'</div></div>'
+    +'<div class="card"><div class="card-title">Ordenamiento</div>'
+    +'<div class="field"><label>Ordenar por</label><select id="sortCol">'+sob+'</select>'
+    +'<div class="hint">Default: primera columna seleccionada.</div></div></div>'
+    +'<div class="card"><div class="card-title">Tratamiento de duplicados</div>'
+    +'<div class="radio-group">'
+    +'<label class="radio-lbl on" onclick="setDupChoice(this,\'first\')"><input type="radio" name="dup" value="first" checked><div class="radio-lbl-text"><div>Primera ocurrencia</div></div></label>'
+    +'<label class="radio-lbl" onclick="setDupChoice(this,\'last\')"><input type="radio" name="dup" value="last"><div class="radio-lbl-text"><div>&#218;ltima ocurrencia</div></div></label>'
+    +'<label class="radio-lbl" onclick="setDupChoice(this,\'all\')"><input type="radio" name="dup" value="all"><div class="radio-lbl-text"><div>Mantener todos</div></div></label>'
+    +'</div></div>'
+    +'<div class="actions"><button class="btn btn-out" onclick="showSplitUpload()">&larr; Atr&#225;s</button>'
+    +'<button class="btn btn-dk" onclick="saveSplitConfig()">Continuar &rarr;</button></div></div>');
+  dupChoice='first';
+  updateSplitHints();
+}
+
+function setSplitStruct(lbl,val){
+  lbl.closest('.card').querySelectorAll('.radio-lbl').forEach(function(l){l.classList.remove('on');});
+  lbl.classList.add('on');
+  document.getElementById('sheetVarWrap').style.display=(val==='sheets'?'block':'none');
+  updateSplitHints();updateSheetNameHint();
+}
+
+function updateSplitHints(){
+  var fn=document.getElementById('folderName');
+  if(fn){var el=document.getElementById('hFolder');if(el)el.textContent='\uD83D\uDCC1 Listados nominales - '+(fn.value.trim()||'...');}
+  var g1el=document.getElementById('g1'),g2el=document.getElementById('g2');
+  if(g1el&&g2el){
+    var hf=document.getElementById('hFile');
+    if(hf)hf.textContent='\uD83D\uDCC4 Listado - [val. '+(g1el.value||'?')+']'+(g2el.value?' - [val. '+g2el.value+']':'')+'.xlsx';
+  }
+}
+
+function updateSheetNameHint(){
+  var el=document.getElementById('hSheet');if(!el)return;
+  var prefix=(document.getElementById('sheetPrefix')||{}).value||'';
+  var varEl=document.getElementById('sheetVar');
+  var varName=varEl?(varEl.options[varEl.selectedIndex]||{}).text||'?':'?';
+  el.textContent='Hoja: '+(prefix?prefix+' - ':'')+'[valor de '+varName+']';
+}
+
+function saveSplitConfig(){
+  var fn=document.getElementById('folderName').value.trim();
+  if(!fn){alert('Ingres&#225; un nombre.');return;}
+  var structVal=document.querySelector('input[name="struct"]:checked').value;
+  var sheetVar=structVal==='sheets'?document.getElementById('sheetVar').value:'';
+  var pfEl=document.getElementById('sheetPrefix');
+  splitCfg={
+    folderName:fn,idCol:document.getElementById('idCol').value,
+    g1:document.getElementById('g1').value,g2:document.getElementById('g2').value,
+    struct:structVal,sheetVar:sheetVar,sheetPrefix:pfEl?pfEl.value.trim():'',
+    cols:selCols('colsGrid'),sortCol:document.getElementById('sortCol').value,dupMode:dupChoice
+  };
+  step=3;showCustomColsPanel('split');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// UNIFY
+// ═══════════════════════════════════════════════════════════════════
+function showUnifyUpload(){
+  step=1;unifyFiles=[];
+  show('<div class="panel active"><div class="p-tag">Unificaci&#243;n &middot; Paso 1 de 5</div><div class="p-title">Cargar archivos</div>'
+    +'<div class="upload-zone" id="dz"><div class="u-icon">&#128194;</div>'
+    +'<div class="u-main">Arrastr&#225; archivos o hac&#233; clic para buscarlos</div>'
+    +'<div class="u-sub">.xlsx &middot; .xls &middot; .csv &middot; M&#250;ltiples a la vez</div>'
+    +'<input type="file" id="fi" accept=".xlsx,.xls,.csv" multiple style="display:none"></div>'
+    +'<div class="file-list" id="fileList"></div>'
+    +'<div class="actions"><button class="btn btn-out" onclick="showHome()">&larr; Volver</button>'
+    +'<button class="btn btn-dk" id="btnUU" disabled onclick="showUnifyConfig()">Continuar &rarr;</button></div></div>');
+  document.getElementById('dz').onclick=function(){document.getElementById('fi').click();};
+  document.getElementById('dz').ondragover=function(e){e.preventDefault();this.classList.add('drag');};
+  document.getElementById('dz').ondragleave=function(){this.classList.remove('drag');};
+  document.getElementById('dz').ondrop=function(e){e.preventDefault();this.classList.remove('drag');loadUnifyFiles(e.dataTransfer.files);};
+  document.getElementById('fi').onchange=function(e){loadUnifyFiles(e.target.files);};
+}
+
+function loadUnifyFiles(files){
+  var arr=Array.prototype.slice.call(files),done=0;
+  arr.forEach(function(file){
+    var r=new FileReader();
+    r.onload=function(e){
+      var wb=XLSX.read(e.target.result,{type:'binary',cellDates:true});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=fixDates(XLSX.utils.sheet_to_json(ws,{defval:''}));
+      unifyFiles.push({name:file.name,rows:rows,headers:rows.length?Object.keys(rows[0]):[]});
+      if(++done===arr.length)renderUnifyFileList();
+    };
+    r.readAsBinaryString(file);
+  });
+}
+
+function renderUnifyFileList(){
+  var html='';
+  unifyFiles.forEach(function(f,i){
+    html+='<div class="file-item"><div class="fp-ic">&#128196;</div>'
+      +'<div class="file-item-name">'+esc(f.name)+'</div>'
+      +'<div class="file-item-meta">'+f.rows.length.toLocaleString()+' filas</div>'
+      +'<div class="file-item-del" onclick="unifyFiles.splice('+i+',1);renderUnifyFileList()">&#10005;</div></div>';
+  });
+  document.getElementById('fileList').innerHTML=html;
+  document.getElementById('btnUU').disabled=unifyFiles.length<1;
+}
+
+function showUnifyConfig(){
+  step=2;
+  var all={},counts={};
+  unifyFiles.forEach(function(f){f.headers.forEach(function(h){all[h]=true;counts[h]=(counts[h]||0)+1;});});
+  var h=Object.keys(all),total=unifyFiles.length;
+  var partial=h.filter(function(x){return counts[x]<total;});
+  var so=h.map(function(x){return'<option value="'+esc(x)+'">'+esc(x)+'</option>';}).join('');
+  var sob='<option value="">&#8212; ninguna / default &#8212;</option>'+so;
+  show('<div class="panel active"><div class="p-tag">Unificaci&#243;n &middot; Paso 2 de 5</div><div class="p-title">Configurar</div>'
+    +'<div class="card"><div class="card-title">Identificaci&#243;n</div>'
+    +'<div class="field"><label>Nombre del archivo unificado</label>'
+    +'<input type="text" id="uName" placeholder="ej: Base unificada 2026" autocomplete="off"></div>'
+    +'<div class="field"><label>Variable identificadora</label><select id="idCol">'+so+'</select></div>'
+    +'<div class="field"><label>Tratamiento de duplicados</label>'
+    +'<div class="radio-group">'
+    +'<label class="radio-lbl on" onclick="setDupChoice(this,\'first\')"><input type="radio" name="dup" value="first" checked><div class="radio-lbl-text"><div>Primera ocurrencia</div></div></label>'
+    +'<label class="radio-lbl" onclick="setDupChoice(this,\'last\')"><input type="radio" name="dup" value="last"><div class="radio-lbl-text"><div>&#218;ltima ocurrencia</div></div></label>'
+    +'<label class="radio-lbl" onclick="setDupChoice(this,\'all\')"><input type="radio" name="dup" value="all"><div class="radio-lbl-text"><div>Mantener todos</div></div></label>'
+    +'</div></div></div>'
+    +'<div class="card"><div class="card-title">Estructura</div>'
+    +'<div class="field"><label>Estructura del archivo</label>'
+    +'<div class="radio-group">'
+    +'<label class="radio-lbl on" onclick="setUnifyStruct(this,\'single\')"><input type="radio" name="ustruct" value="single" checked><div class="radio-lbl-text"><div>Una sola hoja</div></div></label>'
+    +'<label class="radio-lbl" onclick="setUnifyStruct(this,\'sheets\')"><input type="radio" name="ustruct" value="sheets"><div class="radio-lbl-text"><div>M&#250;ltiples hojas por variable</div></div></label>'
+    +'<label class="radio-lbl" onclick="setUnifyStruct(this,\'source\')"><input type="radio" name="ustruct" value="source"><div class="radio-lbl-text"><div>Una hoja por archivo de origen</div></div></label>'
+    +'</div></div>'
+    +'<div id="uSheetVarWrap" style="display:none" class="field"><label>Variable para dividir en hojas</label><select id="uSheetVar">'+so+'</select></div>'
+    +'<div class="field"><label>Columna de origen</label>'
+    +'<div class="toggle-row"><label class="toggle"><input type="checkbox" id="addSource" checked><span class="toggle-slider"></span></label>'
+    +'<span>Agregar columna "Archivo de origen"</span></div></div></div>'
+    +'<div class="card"><div class="card-title">Campos a incluir</div>'
+    +(partial.length?'<div style="font-size:12px;color:var(--warn);margin-bottom:8px">&#9888; Columnas en amarillo no est&#225;n en todos los archivos.</div>':'')
+    +'<div class="cols-grid" id="colsGrid">'+colsCheckboxes(h,partial)+'</div></div>'
+    +'<div class="card"><div class="card-title">Ordenamiento</div>'
+    +'<div class="field"><label>Ordenar por</label><select id="sortCol">'+sob+'</select></div></div>'
+    +'<div class="actions"><button class="btn btn-out" onclick="showUnifyUpload()">&larr; Atr&#225;s</button>'
+    +'<button class="btn btn-dk" onclick="saveUnifyConfig()">Continuar &rarr;</button></div></div>');
+  dupChoice='first';
+}
+
+function setUnifyStruct(lbl,val){
+  document.querySelectorAll('input[name="ustruct"]').forEach(function(r){r.closest('.radio-lbl').classList.remove('on');});
+  lbl.classList.add('on');
+  document.getElementById('uSheetVarWrap').style.display=(val==='sheets'?'block':'none');
+}
+
+function saveUnifyConfig(){
+  var uName=document.getElementById('uName').value.trim();
+  if(!uName){alert('Ingres&#225; un nombre.');return;}
+  var structVal=document.querySelector('input[name="ustruct"]:checked').value;
+  unifyCfg={
+    name:uName,idCol:document.getElementById('idCol').value,dupMode:dupChoice,
+    struct:structVal,sheetVar:structVal==='sheets'?document.getElementById('uSheetVar').value:'',
+    addSource:document.getElementById('addSource').checked,
+    cols:selCols('colsGrid'),sortCol:document.getElementById('sortCol').value
+  };
+  step=3;showCustomColsPanel('unify');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CUSTOM COLUMNS (shared)
+// ═══════════════════════════════════════════════════════════════════
+function showCustomColsPanel(flow){
+  var tag=flow==='split'?'Divisi&#243;n':'Unificaci&#243;n';
+  var step3=flow==='split'?3:3;
+  var colsHtml='';
+  customCols.forEach(function(cc,i){colsHtml+=renderCustomColItem(i);});
+  show('<div class="panel active"><div class="p-tag">'+tag+' &middot; Paso 3 de 5</div><div class="p-title">Columnas extra</div>'
+    +'<div class="alert alert-info"><span class="a-ic">&#9432;</span><div>Columnas en blanco que se agregan a cada fila. Los usuarios las completan en Excel.</div></div>'
+    +'<div class="custom-col-list" id="ccList">'+colsHtml+'</div>'
+    +'<div class="card" id="addColForm"><div class="card-title">Agregar columna</div>'
+    +'<div class="field"><label>Nombre</label><input type="text" id="newColName" placeholder="ej: Asistencia" autocomplete="off"></div>'
+    +'<div class="field"><label>Tipo</label><div class="radio-group">'
+    +'<label class="radio-lbl on" onclick="setNewColType(this,\'open\')"><input type="radio" name="nct" value="open" checked><div class="radio-lbl-text"><div>Respuesta abierta</div></div></label>'
+    +'<label class="radio-lbl" onclick="setNewColType(this,\'dropdown\')"><input type="radio" name="nct" value="dropdown"><div class="radio-lbl-text"><div>Lista desplegable</div></div></label>'
+    +'</div></div>'
+    +'<div id="optsSection" style="display:none">'
+    +'<div style="font-size:13px;font-weight:500;margin-bottom:6px">Opciones de respuesta</div>'
+    +'<div class="opts-list" id="newOptsList"></div>'
+    +'<div class="add-opt-row"><input type="text" id="newOptInput" placeholder="Escribir opci&#243;n y presionar Enter">'
+    +'<button class="btn btn-sm btn-add" onclick="addOpt()">Agregar</button></div></div>'
+    +'<div class="actions" style="margin-top:1rem"><button class="btn btn-sm btn-dk" onclick="addCustomCol(\''+flow+'\')">+ Agregar columna</button></div></div>'
+    +'<div class="actions"><button class="btn btn-out" onclick="'+(flow==='split'?'showSplitConfig':'showUnifyConfig')+'()">&larr; Atr&#225;s</button>'
+    +'<button class="btn btn-dk" onclick="'+(flow==='split'?'showSplitReview':'showUnifyReview')+'()">Continuar &rarr;</button></div></div>');
+  document.getElementById('newOptInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addOpt();}});
+}
+
+function renderCustomColItem(i){
+  var c=customCols[i];
+  var optsHtml='';
+  if(c.type==='dropdown'&&c.options.length){
+    optsHtml='<div class="opts-list" style="margin-top:6px">';
+    c.options.forEach(function(o){optsHtml+='<div class="opt-tag">'+esc(o)+'</div>';});
+    optsHtml+='</div>';
+  }
+  return'<div class="custom-col-item"><div class="custom-col-header">'
+    +'<div class="custom-col-name">'+esc(c.label)+'</div>'
+    +'<div class="custom-col-type">'+(c.type==='open'?'Abierta':'Desplegable')+'</div>'
+    +'<div class="custom-col-del" onclick="removeCustomCol('+i+',\''+currentFlow()+'\')">&#10005;</div>'
+    +'</div>'+optsHtml+'</div>';
+}
+
+function currentFlow(){return mode==='split'?'split':'unify';}
+
+function setNewColType(lbl,val){
+  newColType=val;
+  document.querySelectorAll('input[name="nct"]').forEach(function(r){r.closest('.radio-lbl').classList.remove('on');});
+  lbl.classList.add('on');
+  document.getElementById('optsSection').style.display=(val==='dropdown'?'block':'none');
+}
+
+function addOpt(){
+  var inp=document.getElementById('newOptInput');
+  var val=inp.value.trim();if(!val)return;
+  newColOpts.push(val);inp.value='';renderNewOptsList();
+}
+function renderNewOptsList(){
+  var html='';
+  newColOpts.forEach(function(o,i){
+    html+='<div class="opt-tag">'+esc(o)+'<span class="opt-tag-del" onclick="newColOpts.splice('+i+',1);renderNewOptsList()">&#10005;</span></div>';
+  });
+  document.getElementById('newOptsList').innerHTML=html;
+}
+function addCustomCol(flow){
+  var name=document.getElementById('newColName').value.trim();
+  if(!name){alert('Ingres&#225; un nombre.');return;}
+  if(newColType==='dropdown'&&!newColOpts.length){alert('Agrega al menos una opci&#243;n.');return;}
+  customCols.push({id:'cc_'+(customColCounter++),label:name,type:newColType,options:newColOpts.slice()});
+  newColOpts=[];newColType='open';
+  showCustomColsPanel(flow);
+}
+function removeCustomCol(i,flow){customCols.splice(i,1);showCustomColsPanel(flow);}
+
+// ═══════════════════════════════════════════════════════════════════
+// SPLIT REVIEW & RUN
+// ═══════════════════════════════════════════════════════════════════
+function showSplitReview(){
+  step=4;
+  var cfg=splitCfg,rows=splitData.rows;
+  var seen={},dups=[];
+  rows.forEach(function(r,i){var k=String(r[cfg.idCol]||'').trim().toLowerCase();if(k in seen)dups.push(i);else seen[k]=i;});
+  var dupHtml=dups.length
+    ?'<div class="alert alert-warn"><span class="a-ic">&#9888;</span><div><strong>'+dups.length+' duplicados</strong> seg&#250;n <em>'+esc(cfg.idCol)+'</em>. Tratamiento: '+(cfg.dupMode==='first'?'primera':cfg.dupMode==='last'?'&#250;ltima':'todos')+'.</div></div>'
+    :'<div class="alert alert-ok"><span class="a-ic">&#10003;</span> Sin duplicados en <em>'+esc(cfg.idCol)+'</em>.</div>';
+  var deduped=dedupRows(rows,cfg.idCol,cfg.dupMode);
+  var groups=groupBy(deduped,cfg.g1);
+  var keys=Object.keys(groups).sort();
+  var metHtml='<div class="metrics">'
+    +'<div class="metric"><div class="m-lbl">Filas originales</div><div class="m-val">'+rows.length.toLocaleString()+'</div></div>'
+    +'<div class="metric"><div class="m-lbl">A procesar</div><div class="m-val">'+deduped.length.toLocaleString()+'</div></div>'
+    +'<div class="metric"><div class="m-lbl">Archivos</div><div class="m-val">'+keys.length+'</div></div></div>';
+  var trows='';
+  keys.slice(0,6).forEach(function(kk){
+    var g2v=cfg.g2&&groups[kk][0]?groups[kk][0][cfg.g2]:'';
+    var fn=cfg.g2&&g2v?'Listado - '+kk+' - '+g2v+'.xlsx':'Listado - '+kk+'.xlsx';
+    trows+='<tr><td>'+esc(kk)+'</td><td class="mono">'+esc(fn)+'</td><td><span class="badge">'+groups[kk].length+'</span></td></tr>';
+  });
+  var ccSummary=customCols.length?'<div class="alert alert-info" style="margin-top:1rem"><span class="a-ic">+</span><div>'+customCols.length+' columna(s) extra: '+customCols.map(function(c){return'<strong>'+esc(c.label)+'</strong>';}).join(', ')+'</div></div>':'';
+  show('<div class="panel active"><div class="p-tag">Divisi&#243;n &middot; Paso 4 de 5</div><div class="p-title">Revisar y confirmar</div>'
+    +dupHtml+metHtml
+    +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--t3);margin-bottom:8px">Vista previa</div>'
+    +'<div class="tbl-wrap"><table><thead><tr><th>'+esc(cfg.g1)+'</th><th>Archivo</th><th>Filas</th></tr></thead><tbody>'+trows+'</tbody></table>'
+    +(keys.length>6?'<div class="tbl-more">y '+(keys.length-6)+' m&#225;s...</div>':'')+'</div>'
+    +ccSummary
+    +'<div class="card" style="margin-top:1rem"><div class="card-title">Estructura de carpetas</div>'
+    +'<div class="field"><div class="toggle-row"><label class="toggle"><input type="checkbox" id="subfoldersToggle"><span class="toggle-slider"></span></label>'
+    +'<span>Crear subcarpeta por cada valor de <strong>'+esc(cfg.g1)+'</strong></span></div>'
+    +'<div class="hint" style="margin-top:6px">'+esc('Listados nominales - '+cfg.folderName)+' &rsaquo; '+esc(String(keys[0]||'valor'))+' &rsaquo; ...</div>'
+    +'</div></div>'
+    +'<div class="card" style="margin-top:1rem"><div class="card-title">Contrase&#241;as (opcional)</div>'
+    +'<div class="field"><div class="toggle-row"><label class="toggle"><input type="checkbox" id="pwdZipToggle"><span class="toggle-slider"></span></label>'
+    +'<span>Proteger el ZIP general con contrase&#241;a</span></div></div>'
+    +'<div class="field"><div class="toggle-row"><label class="toggle"><input type="checkbox" id="pwdFilesToggle"><span class="toggle-slider"></span></label>'
+    +'<span>Proteger cada archivo con contrase&#241;a individual (AES-256)</span></div>'
+    +'<div class="hint" style="margin-top:6px">Cada Excel queda en su propio ZIP encriptado. Se genera tabla resumen con archivo y contrase&#241;a.</div></div></div>'
+    +'<div class="actions" style="margin-top:1.5rem">'
+    +'<button class="btn btn-out" onclick="showCustomColsPanel(\'split\')">&larr; Atr&#225;s</button>'
+    +'<button class="btn btn-dk" onclick="confirmAndRunSplit()">Generar ZIP &darr;</button></div></div>');
+}
+
+function confirmAndRunSplit(){
+  splitCfg.subfolders=document.getElementById('subfoldersToggle').checked;
+  splitCfg.pwdZip=document.getElementById('pwdZipToggle').checked;
+  splitCfg.pwdFiles=document.getElementById('pwdFilesToggle').checked;
+  runSplit();
+}
+
+function runSplit(){
+  step=5;
+  var cfg=splitCfg,rows=splitData.rows;
+  showProgress('Divisi&#243;n &middot; Paso 5 de 5');
+  var deduped=dedupRows(rows,cfg.idCol,cfg.dupMode);
+  var groups=groupBy(deduped,cfg.g1);
+  var keys=Object.keys(groups).sort();
+  var zipPwd=cfg.pwdZip?genPassword():null;
+  var filePwds={};
+  if(cfg.pwdFiles)keys.forEach(function(k){filePwds[k]=genPassword();});
+  var outerZip=new JSZip();
+  var rootFolder=outerZip.folder('Listados nominales - '+cfg.folderName);
+  var i=0,passwordTable=[];
+  var log=document.getElementById('logArea'),bar=document.getElementById('progBar');
+
+  function processKey(k,grpRows,targetFolder,baseFileName,filePwd){
+    var wb2=XLSX.utils.book_new();
+    if(cfg.struct==='sheets'&&cfg.sheetVar){
+      var subGroups=groupBy(grpRows,cfg.sheetVar);
+      Object.keys(subGroups).sort().forEach(function(sk){
+        var rawSh=cfg.sheetPrefix?cfg.sheetPrefix+' - '+sk:sk;
+        var sRows=sortRows(subGroups[sk],cfg.sortCol,cfg.cols);
+        XLSX.utils.book_append_sheet(wb2,buildWorksheetData(sRows,cfg.cols),truncSheetName(rawSh));
+      });
+    } else {
+      var sorted=sortRows(grpRows,cfg.sortCol,cfg.cols);
+      XLSX.utils.book_append_sheet(wb2,buildWorksheetData(sorted,cfg.cols),'Listado');
+    }
+    var xlsxBuf=XLSX.write(wb2,{bookType:'xlsx',type:'array'});
+    patchDropdowns(xlsxBuf,cfg.cols).then(function(finalBuf){
+      addFileToFolder(targetFolder,baseFileName,finalBuf,filePwd).then(function(finalFn){
+        if(filePwd)passwordTable.push({file:finalFn,password:filePwd});
+        bar.style.width=Math.round(((i+1)/keys.length)*100)+'%';
+        log.innerHTML+='<div class="log-ok">&#10003; '+esc(finalFn)+(filePwd?' &middot; pwd: <strong>'+esc(filePwd)+'</strong>':'')+'</div>';
+        i++;setTimeout(next,8);
+      });
+    });
+  }
+
+  function next(){
+    if(i>=keys.length){
+      outerZip.generateAsync({type:'blob'})
+        .then(function(blob){
+          var url=URL.createObjectURL(blob);
+          showDone(keys.length+' archivos generados','Listados nominales - '+cfg.folderName+'.zip',url,'Listados nominales - '+cfg.folderName+'.zip',zipPwd,passwordTable);
+        });
+      return;
+    }
+    var k=keys[i];
+    var grpRows=groups[k];
+    var g2v=cfg.g2&&grpRows[0]?grpRows[0][cfg.g2]:'';
+    var baseFileName=cfg.g2&&g2v?'Listado - '+k+' - '+g2v:'Listado - '+k;
+    var folderLabel=sanitizeFolderName(cfg.g2&&g2v?'Listados - '+k+' - '+g2v:'Listados - '+k);
+    var targetFolder=cfg.subfolders?rootFolder.folder(folderLabel):rootFolder;
+    var filePwd=cfg.pwdFiles?(filePwds[k]||null):null;
+    processKey(k,grpRows,targetFolder,baseFileName,filePwd);
+  }
+  next();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// UNIFY REVIEW & RUN
+// ═══════════════════════════════════════════════════════════════════
+function mergeUnifyRows(addSource){
+  var all=[];
+  unifyFiles.forEach(function(f){
+    f.rows.forEach(function(r){
+      var o=Object.assign({},r);if(addSource)o['Archivo de origen']=f.name;all.push(o);
+    });
+  });
+  return all;
+}
+
+function showUnifyReview(){
+  step=4;
+  var cfg=unifyCfg;
+  var allRows=mergeUnifyRows(cfg.addSource);
+  var seen={},dups=[];
+  allRows.forEach(function(r,i){var k=String(r[cfg.idCol]||'').trim().toLowerCase();if(k in seen)dups.push(i);else seen[k]=i;});
+  var dupHtml=dups.length
+    ?'<div class="alert alert-warn"><span class="a-ic">&#9888;</span><div><strong>'+dups.length+' duplicados</strong>. Tratamiento: '+(cfg.dupMode==='first'?'primera':cfg.dupMode==='last'?'&#250;ltima':'todos')+'.</div></div>'
+    :'<div class="alert alert-ok"><span class="a-ic">&#10003;</span> Sin duplicados.</div>';
+  var deduped=dedupRows(allRows,cfg.idCol,cfg.dupMode);
+  var sheetInfo='';
+  if(cfg.struct==='sheets'){var g=groupBy(deduped,cfg.sheetVar);sheetInfo=' &middot; '+Object.keys(g).length+' hojas';}
+  else if(cfg.struct==='source'){sheetInfo=' &middot; '+unifyFiles.length+' hojas';}
+  var ccSummary=customCols.length?'<div class="alert alert-info"><span class="a-ic">+</span><div>'+customCols.length+' columna(s) extra.</div></div>':'';
+  show('<div class="panel active"><div class="p-tag">Unificaci&#243;n &middot; Paso 4 de 5</div><div class="p-title">Revisar y confirmar</div>'
+    +dupHtml
+    +'<div class="metrics">'
+    +'<div class="metric"><div class="m-lbl">Archivos</div><div class="m-val">'+unifyFiles.length+'</div></div>'
+    +'<div class="metric"><div class="m-lbl">Total filas</div><div class="m-val">'+allRows.length.toLocaleString()+'</div></div>'
+    +'<div class="metric"><div class="m-lbl">A exportar</div><div class="m-val">'+deduped.length.toLocaleString()+'</div></div></div>'
+    +'<div class="card"><div class="m-lbl" style="margin-bottom:6px">Archivo de salida</div>'
+    +'<div class="mono-hint">&#128196; '+esc(cfg.name)+'.xlsx'+sheetInfo+'</div></div>'
+    +ccSummary
+    +'<div class="actions" style="margin-top:1.5rem">'
+    +'<button class="btn btn-out" onclick="showCustomColsPanel(\'unify\')">&larr; Atr&#225;s</button>'
+    +'<button class="btn btn-dk" onclick="runUnify()">Generar archivo &darr;</button></div></div>');
+}
+
+function runUnify(){
+  step=5;
+  var cfg=unifyCfg;
+  showProgress('Unificaci&#243;n &middot; Paso 5 de 5');
+  var allRows=mergeUnifyRows(cfg.addSource);
+  var deduped=dedupRows(allRows,cfg.idCol,cfg.dupMode);
+  var log=document.getElementById('logArea'),bar=document.getElementById('progBar');
+  var wb2=XLSX.utils.book_new();
+  var sheets=[];
+  if(cfg.struct==='source'){
+    unifyFiles.forEach(function(f){
+      var srcRows=cfg.addSource?f.rows.map(function(r){var o=Object.assign({},r);o['Archivo de origen']=f.name;return o;}):f.rows.slice();
+      srcRows=dedupRows(srcRows,cfg.idCol,cfg.dupMode);
+      sheets.push({name:truncSheetName(f.name.replace(/\.[^.]+$/,'')),rows:sortRows(srcRows,cfg.sortCol,cfg.cols)});
+    });
+  } else if(cfg.struct==='sheets'&&cfg.sheetVar){
+    var groups=groupBy(deduped,cfg.sheetVar);
+    Object.keys(groups).sort().forEach(function(k){
+      sheets.push({name:truncSheetName(k),rows:sortRows(groups[k],cfg.sortCol,cfg.cols)});
+    });
+  } else {
+    sheets.push({name:'Unificado',rows:sortRows(deduped,cfg.sortCol,cfg.cols)});
+  }
+  sheets.forEach(function(s){
+    XLSX.utils.book_append_sheet(wb2,buildWorksheetData(s.rows,cfg.cols),s.name);
+    log.innerHTML+='<div class="log-ok">&#10003; Hoja: '+esc(s.name)+' ('+s.rows.length+' filas)</div>';
+  });
+  bar.style.width='80%';
+  var xlsxBuf=XLSX.write(wb2,{bookType:'xlsx',type:'array'});
+  patchDropdowns(xlsxBuf,cfg.cols).then(function(finalBuf){
+    bar.style.width='100%';
+    var blob=new Blob([finalBuf],{type:'application/octet-stream'});
+    var url=URL.createObjectURL(blob);
+    showDone('Archivo generado',cfg.name+'.xlsx',url,cfg.name+'.xlsx',null,null);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MERGE
+// ═══════════════════════════════════════════════════════════════════
+function showMergeUpload(){
+  step=1;mergeFiles=[];
+  show('<div class="panel active"><div class="p-tag">Combinar &middot; Paso 1 de 4</div><div class="p-title">Cargar archivos</div>'
+    +'<div class="alert alert-info"><span class="a-ic">&#9432;</span><div>Carg&#225; el Excel madre y uno o m&#225;s archivos de los que quieras traer columnas.</div></div>'
+    +'<div class="upload-zone" id="dz"><div class="u-icon">&#128194;</div>'
+    +'<div class="u-main">Arrastr&#225; los archivos o hac&#233; clic para buscarlos</div>'
+    +'<div class="u-sub">.xlsx &middot; .xls &middot; .csv &middot; M&#237;nimo 2 archivos</div>'
+    +'<input type="file" id="fi" accept=".xlsx,.xls,.csv" multiple style="display:none"></div>'
+    +'<div class="file-list" id="fileList"></div>'
+    +'<div class="actions"><button class="btn btn-out" onclick="showHome()">&larr; Volver</button>'
+    +'<button class="btn btn-dk" id="btnMU" disabled onclick="showMergeConfig()">Continuar &rarr;</button></div></div>');
+  document.getElementById('dz').onclick=function(){document.getElementById('fi').click();};
+  document.getElementById('dz').ondragover=function(e){e.preventDefault();this.classList.add('drag');};
+  document.getElementById('dz').ondragleave=function(){this.classList.remove('drag');};
+  document.getElementById('dz').ondrop=function(e){e.preventDefault();this.classList.remove('drag');loadMergeFiles(e.dataTransfer.files);};
+  document.getElementById('fi').onchange=function(e){loadMergeFiles(e.target.files);};
+}
+
+function loadMergeFiles(files){
+  var arr=Array.prototype.slice.call(files),done=0;
+  arr.forEach(function(file){
+    var r=new FileReader();
+    r.onload=function(e){
+      var wb=XLSX.read(e.target.result,{type:'binary',cellDates:true});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=fixDates(XLSX.utils.sheet_to_json(ws,{defval:''}));
+      mergeFiles.push({name:file.name,rows:rows,headers:rows.length?Object.keys(rows[0]):[]});
+      if(++done===arr.length)renderMergeFileList();
+    };
+    r.readAsArrayBuffer(file);
+  });
+}
+
+function renderMergeFileList(){
+  var html='';
+  mergeFiles.forEach(function(f,i){
+    html+='<div class="file-item"><div class="fp-ic">&#128196;</div>'
+      +'<div class="file-item-name">'+esc(f.name)+'</div>'
+      +'<div class="file-item-meta">'+f.rows.length.toLocaleString()+' filas &middot; '+f.headers.length+' cols</div>'
+      +'<div class="file-item-del" onclick="mergeFiles.splice('+i+',1);renderMergeFileList()">&#10005;</div></div>';
+  });
+  document.getElementById('fileList').innerHTML=html;
+  document.getElementById('btnMU').disabled=mergeFiles.length<2;
+}
+
+function showMergeConfig(){
+  if(mergeFiles.length<2){alert('Necesit&#225;s al menos 2 archivos.');return;}
+  step=2;
+  var motherOpts=mergeFiles.map(function(f,i){return'<option value="'+i+'">'+esc(f.name)+'</option>';}).join('');
+  show('<div class="panel active"><div class="p-tag">Combinar &middot; Paso 2 de 4</div><div class="p-title">Configurar combinaci&#243;n</div>'
+    +'<div class="card"><div class="card-title">Archivo madre</div>'
+    +'<div class="field"><label>&#191;Cu&#225;l es el Excel madre?</label>'
+    +'<select id="motherSel" onchange="renderMergeKeyAndCols()">'+motherOpts+'</select>'
+    +'<div class="hint">Sus filas se conservan siempre. Las columnas nuevas se agregan desde los otros archivos.</div></div></div>'
+    +'<div id="mergeKeySection"></div>'
+    +'<div id="mergeColSection"></div>'
+    +'<div id="mergeMultiSection"></div>'
+    +'<div class="actions"><button class="btn btn-out" onclick="showMergeUpload()">&larr; Atr&#225;s</button>'
+    +'<button class="btn btn-dk" onclick="saveMergeConfig()">Continuar &rarr;</button></div></div>');
+  renderMergeKeyAndCols();
+}
+
+function renderMergeKeyAndCols(){
+  var motherIdx=parseInt(document.getElementById('motherSel').value)||0;
+  var mother=mergeFiles[motherIdx];
+  var children=mergeFiles.filter(function(_,i){return i!==motherIdx;});
+  var motherKeyOpts=mother.headers.map(function(h){return'<option value="'+esc(h)+'">'+esc(h)+'</option>';}).join('');
+  var keyHtml='<div class="card"><div class="card-title">Columna clave para el merge</div>'
+    +'<div class="hint" style="margin-bottom:12px">Seleccion&#225; la columna clave en cada archivo para emparejar filas.</div>'
+    +'<div class="field"><label>Clave en <strong>'+esc(mother.name)+'</strong> (madre)</label>'
+    +'<select id="motherKey">'+motherKeyOpts+'</select></div>';
+  children.forEach(function(ch,ci){
+    var chOpts=ch.headers.map(function(h){return'<option value="'+esc(h)+'">'+esc(h)+'</option>';}).join('');
+    keyHtml+='<div class="field"><label>Clave en <strong>'+esc(ch.name)+'</strong></label>'
+      +'<select id="childKey_'+ci+'">'+chOpts+'</select></div>';
+  });
+  keyHtml+='</div>';
+  document.getElementById('mergeKeySection').innerHTML=keyHtml;
+  var colHtml='<div class="card"><div class="card-title">Columnas a agregar al madre</div>'
+    +'<div class="hint" style="margin-bottom:10px">Las columnas que ya existen en el madre se renombrar&#225;n con <em>_2</em>.</div>';
+  children.forEach(function(ch,ci){
+    colHtml+='<div style="font-size:12px;font-weight:600;color:var(--t2);margin:10px 0 6px">'+esc(ch.name)+'</div>'
+      +'<div class="cols-grid" id="childCols_'+ci+'">';
+    ch.headers.forEach(function(h){
+      var clash=mother.headers.indexOf(h)>=0;
+      colHtml+='<label class="col-lbl on"><input type="checkbox" checked value="'+esc(h)+'"> '+esc(h)
+        +(clash?'<span class="partial-badge">&#8597; _2</span>':'')+'</label>';
+    });
+    colHtml+='</div>';
+  });
+  colHtml+='</div>';
+  document.getElementById('mergeColSection').innerHTML=colHtml;
+  document.getElementById('mergeMultiSection').innerHTML='<div class="card"><div class="card-title">M&#250;ltiples coincidencias</div>'
+    +'<div class="radio-group">'
+    +'<label class="radio-lbl on" onclick="setRadio(this,\'mmatch\')"><input type="radio" name="mmatch" value="first" checked><div class="radio-lbl-text"><div>Primera coincidencia</div></div></label>'
+    +'<label class="radio-lbl" onclick="setRadio(this,\'mmatch\')"><input type="radio" name="mmatch" value="last"><div class="radio-lbl-text"><div>&#218;ltima coincidencia</div></div></label>'
+    +'<label class="radio-lbl" onclick="setRadio(this,\'mmatch\')"><input type="radio" name="mmatch" value="concat"><div class="radio-lbl-text"><div>Concatenar con " / "</div></div></label>'
+    +'</div></div>';
+}
+
+function setRadio(lbl,name){
+  document.querySelectorAll('input[name="'+name+'"]').forEach(function(r){r.closest('.radio-lbl').classList.remove('on');});
+  lbl.classList.add('on');
+}
+
+function saveMergeConfig(){
+  var motherIdx=parseInt(document.getElementById('motherSel').value)||0;
+  var mother=mergeFiles[motherIdx];
+  var children=mergeFiles.filter(function(_,i){return i!==motherIdx;});
+  var childIndices=mergeFiles.map(function(_,i){return i;}).filter(function(i){return i!==motherIdx;});
+  var motherKey=document.getElementById('motherKey').value;
+  if(!motherKey){alert('Seleccion&#225; la clave del madre.');return;}
+  var childConfigs=[];
+  for(var ci=0;ci<children.length;ci++){
+    var childKey=document.getElementById('childKey_'+ci).value;
+    if(!childKey){alert('Seleccion&#225; la clave de "'+children[ci].name+'".');return;}
+    var sc=[];document.getElementById('childCols_'+ci).querySelectorAll('input:checked').forEach(function(x){sc.push(x.value);});
+    if(!sc.length){alert('Seleccion&#225; al menos una columna de "'+children[ci].name+'".');return;}
+    childConfigs.push({fileIdx:childIndices[ci],name:children[ci].name,key:childKey,cols:sc});
+  }
+  mergeCfg={motherIdx:motherIdx,motherKey:motherKey,children:childConfigs,
+    multiMatch:document.querySelector('input[name="mmatch"]:checked').value};
+  showMergeReview();
+}
+
+function showMergeReview(){
+  step=3;
+  var mother=mergeFiles[mergeCfg.motherIdx];
+  var warnings=[],multiCount=0;
+  mergeCfg.children.forEach(function(cc){
+    var childFile=mergeFiles[cc.fileIdx];
+    var lk={};
+    childFile.rows.forEach(function(r){var k=String(r[cc.key]||'').trim().toLowerCase();if(!lk[k])lk[k]=0;lk[k]++;});
+    var multi=0;
+    mother.rows.forEach(function(r){var k=String(r[mergeCfg.motherKey]||'').trim().toLowerCase();if(lk[k]>1)multi++;});
+    if(multi>0){multiCount+=multi;warnings.push('<strong>'+esc(cc.name)+'</strong>: '+multi+' filas con m&#250;ltiples coincidencias.');}
+  });
+  var anyLk={};
+  mergeCfg.children.forEach(function(cc){mergeFiles[cc.fileIdx].rows.forEach(function(r){anyLk[String(r[cc.key]||'').trim().toLowerCase()]=true;});});
+  var matched=0,unmatched=0;
+  mother.rows.forEach(function(r){if(anyLk[String(r[mergeCfg.motherKey]||'').trim().toLowerCase()])matched++;else unmatched++;});
+  var warnHtml=warnings.length
+    ?'<div class="alert alert-warn"><span class="a-ic">&#9888;</span><div><strong>Coincidencias m&#250;ltiples</strong> &mdash; tratamiento: '+(mergeCfg.multiMatch==='first'?'primera':mergeCfg.multiMatch==='last'?'&#250;ltima':'concatenar')+'<br>'+warnings.join('<br>')+'</div></div>'
+    :'<div class="alert alert-ok"><span class="a-ic">&#10003;</span> Sin coincidencias m&#250;ltiples.</div>';
+  var totalNewCols=mergeCfg.children.reduce(function(acc,cc){return acc+cc.cols.length;},0);
+  var motherHeaders=mother.headers.slice();
+  var colRows='';
+  mergeCfg.children.forEach(function(cc){
+    cc.cols.forEach(function(col){
+      var clash=motherHeaders.indexOf(col)>=0;
+      var final=clash?col+'_2':col;
+      motherHeaders.push(final);
+      colRows+='<tr><td class="mono">'+esc(final)+(clash?'<span class="partial-badge">renombrada</span>':'')+'</td><td style="font-size:12px;color:var(--t3)">'+esc(cc.name)+'</td></tr>';
+    });
+  });
+  show('<div class="panel active"><div class="p-tag">Combinar &middot; Paso 3 de 4</div><div class="p-title">Revisar y confirmar</div>'
+    +warnHtml
+    +'<div class="metrics">'
+    +'<div class="metric"><div class="m-lbl">Filas del madre</div><div class="m-val">'+mother.rows.length.toLocaleString()+'</div></div>'
+    +'<div class="metric"><div class="m-lbl">Con match</div><div class="m-val" style="color:var(--ok)">'+matched.toLocaleString()+'</div></div>'
+    +'<div class="metric"><div class="m-lbl">Sin match</div><div class="m-val'+(unmatched>0?' style="color:var(--warn)"':'')+'>'+unmatched.toLocaleString()+'</div></div></div>'
+    +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--t3);margin-bottom:8px">Columnas a agregar ('+totalNewCols+')</div>'
+    +'<div class="tbl-wrap"><table><thead><tr><th>Columna en resultado</th><th>Origen</th></tr></thead><tbody>'+colRows+'</tbody></table></div>'
+    +'<div class="actions" style="margin-top:1.5rem">'
+    +'<button class="btn btn-out" onclick="showMergeConfig()">&larr; Atr&#225;s</button>'
+    +'<button class="btn btn-dk" onclick="runMerge()">Generar archivo &darr;</button></div></div>');
+}
+
+function runMerge(){
+  step=4;
+  showProgress('Combinar &middot; Paso 4 de 4');
+  var log=document.getElementById('logArea'),bar=document.getElementById('progBar');
+  var mother=mergeFiles[mergeCfg.motherIdx];
+  var childLookups=[];
+  mergeCfg.children.forEach(function(cc){
+    var lk={};mergeFiles[cc.fileIdx].rows.forEach(function(r){var k=String(r[cc.key]||'').trim().toLowerCase();if(!lk[k])lk[k]=[];lk[k].push(r);});
+    childLookups.push(lk);
+    log.innerHTML+='<div class="log-ok">&#10003; &#205;ndice: '+esc(cc.name)+'</div>';
+  });
+  bar.style.width='20%';
+  var motherHeaders=mother.headers.slice();
+  var colMaps=[];
+  mergeCfg.children.forEach(function(cc,ci){
+    var used=motherHeaders.slice(),map=[];
+    cc.cols.forEach(function(orig){
+      var final=orig;
+      if(used.indexOf(final)>=0)final=orig+'_2';
+      while(used.indexOf(final)>=0)final=final+'_2';
+      used.push(final);motherHeaders.push(final);
+      map.push({original:orig,final:final});
+    });
+    colMaps.push(map);
+  });
+  bar.style.width='40%';
+  var resultRows=[],unmatchedCount=0;
+  mother.rows.forEach(function(r){
+    var row=Object.assign({},r);
+    var mk=String(r[mergeCfg.motherKey]||'').trim().toLowerCase();
+    var hasMatch=false;
+    mergeCfg.children.forEach(function(cc,ci){
+      var matches=childLookups[ci][mk]||[];
+      if(!matches.length){colMaps[ci].forEach(function(m){row[m.final]='';});}
+      else{
+        hasMatch=true;
+        var resolved=mergeCfg.multiMatch==='first'?[matches[0]]:mergeCfg.multiMatch==='last'?[matches[matches.length-1]]:matches;
+        colMaps[ci].forEach(function(m){
+          var vals=resolved.map(function(mr){return String(mr[m.original]||'');});
+          row[m.final]=mergeCfg.multiMatch==='concat'?vals.join(' / '):vals[0];
+        });
+      }
+    });
+    if(!hasMatch)unmatchedCount++;
+    resultRows.push(row);
+  });
+  bar.style.width='75%';
+  log.innerHTML+='<div class="log-ok">&#10003; '+resultRows.length.toLocaleString()+' filas procesadas &middot; '+unmatchedCount+' sin coincidencia</div>';
+  var ws=buildWorksheetData(resultRows,motherHeaders);
+  var wb2=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb2,ws,'Combinado');
+  var buf=XLSX.write(wb2,{bookType:'xlsx',type:'array'});
+  var blob=new Blob([buf],{type:'application/octet-stream'});
+  var url=URL.createObjectURL(blob);
+  bar.style.width='100%';
+  var outName=mother.name.replace(/\.[^.]+$/,'')+'_combinado.xlsx';
+  showDone('Archivo generado',outName,url,outName,null,null);
+}
+
+// ─── Boot ────────────────────────────────────────────────────────────────────
+showHome();
+</script>
+</body>
+</html>
